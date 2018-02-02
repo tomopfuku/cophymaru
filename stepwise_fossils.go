@@ -4,18 +4,24 @@ package cophy
 
 //InsertFossilTaxa finds the ML placement of a set of fossils via stepwise addition
 func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, iter int) (besttr string, bestll float64) {
+	nodes := tree.PreorderArray()
+	//TODO: get this missing data stuff up and running
+	//trMeans := CalcSiteMeans(nodes)
+	//MakeMissingMeansArray(nodes)
 	for _, curFos := range fosNms {
 		ftip := new(Node)
 		ftip.NAME = curFos
 		ftip.LEN = 0.01
 		ftip.CONTRT = traits[curFos]
+		//MakeMissingDataSlice(ftip)
+		//MakeMissingMeansTip(ftip, trMeans) //replace missing traits with the mean value across all sample traits
 		newpar := new(Node)
 		newpar.LEN = 0.01
 		newpar.AddChild(ftip)
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
 		}
-		nodes := tree.PreorderArray()
+
 		bestll = -1000000000000.0
 		besttr = ""
 		curll := float64(0.0)
@@ -38,6 +44,7 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 		//fmt.Println(bestll,besttr)
 		GraftTip(newpar, bestPlace)
 		IterateBMLengths(tree, iter)
+		nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
 		//fmt.Println(tree.Newick(true))
 	}
 	return

@@ -63,19 +63,24 @@ func ReadContinuous(traitfl string) (map[string][]float64, int, int) {
 	return tm, ntax, ntraits
 }
 
+//MakeMissingDataSlice will intialize the MIS attribute of node t by identifying traits with LARGE (ie. missing) values and updating MIS accordingly.
+func MakeMissingDataSlice(t *Node) {
+	for _, tr := range t.CONTRT { //create slice marking missing data
+		if tr == -1000000.0 {
+			t.MIS = append(t.MIS, true)
+		} else {
+			t.MIS = append(t.MIS, false)
+		}
+	}
+}
+
 //MapContinuous maps the traits contained with in a (golang) map to the tips of a tree and initializes slices of the same length for the internal nodes
 func MapContinuous(t *Node, traits map[string][]float64, ntraits int) {
 	var z float64
 	z = 0.000000000
 	if len(t.CHLD) == 0 {
 		t.CONTRT = traits[t.NAME]
-		for _, tr := range t.CONTRT { //create slice marking missing data
-			if tr == -1000000.0 {
-				t.MIS = append(t.MIS, true)
-			} else {
-				t.MIS = append(t.MIS, false)
-			}
-		}
+		MakeMissingDataSlice(t)
 	} else {
 		count := 0
 		for {
