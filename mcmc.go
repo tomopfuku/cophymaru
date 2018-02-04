@@ -177,6 +177,7 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 	return lp, ll
 }
 
+//TODO: I think we can just delete this. It is deprecated.
 func drawRandomNode(n []*Node) (rnode *Node) {
 	rnoden := rand.Intn(len(n))
 	rnode = n[rnoden]

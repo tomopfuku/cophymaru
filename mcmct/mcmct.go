@@ -25,6 +25,7 @@ func main() {
 	genArg := flag.Int("gen", 5000, "number of MCMC generations to run")
 	brPrior := flag.String("blpr", "0", "specifies the prior to place on branch lengths. \nOptions:\n\n0    Flat\n1    Exponential (mean = 10)\n")
 	fosArg := flag.String("fos", "", "file containing names of fossil tips\ntips should be comma-separated")
+	startArg := flag.String("st", "0", "Specify whether to use ML or random starting tree and branch lengths\n0    ML\n1    random\n")
 	flag.Parse()
 	//var ntax,ntraits int
 	nwk := cophy.ReadLine(*treeArg)[0]
@@ -38,7 +39,11 @@ func main() {
 	for _, i := range strings.Split(*fosArg, ",") {
 		fosSlice = append(fosSlice, i)
 	}
-	starttr, startll := cophy.InsertFossilTaxa(tree, traits, fosSlice, *iterArg)
-	fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
+	if *startArg == "0" {
+		starttr, startll := cophy.InsertFossilTaxa(tree, traits, fosSlice, *iterArg)
+		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
+	} else if *startArg == "1" {
+		cophy.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg)
+	}
 	cophy.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior)
 }
