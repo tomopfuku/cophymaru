@@ -72,7 +72,7 @@ func debugParChld(tree *Node) {
 }
 
 //this is a quick check to make sure the tree passed is unrooted
-func assertUnrootedTree(tree *Node) {
+func AssertUnrootedTree(tree *Node) {
 	if len(tree.CHLD) != 3 {
 		fmt.Print("BRANCH LENGTHS MUST BE ITERATED ON AN UNROOTED TREE. THIS TREE IS ROOTED.")
 		os.Exit(0)
@@ -81,10 +81,10 @@ func assertUnrootedTree(tree *Node) {
 
 //IterateBMLengths will iteratively calculate the ML branch lengths for a particular topology
 func IterateBMLengths(tree *Node, niter int) {
-	assertUnrootedTree(tree)
+	AssertUnrootedTree(tree)
 	itercnt := 0
 	for {
-		calcBMLengths(tree)
+		CalcBMLengths(tree)
 		itercnt++
 		if itercnt == niter {
 			break
@@ -92,7 +92,7 @@ func IterateBMLengths(tree *Node, niter int) {
 	}
 }
 
-func calcBMLengths(tree *Node) {
+func CalcBMLengths(tree *Node) {
 	rnodes := tree.PreorderArray()
 	lnode := 0
 	for ind, newroot := range rnodes {

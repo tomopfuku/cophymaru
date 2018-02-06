@@ -21,7 +21,7 @@ func postorder(curnode *cophymaru.Node) {
 func main() {
 	treeArg := flag.String("t", "", "input tree")
 	traitArg := flag.String("m", "", "continuous traits")
-	iterArg := flag.Int("i", 1, "num iterations for branch length calculation")
+	iterArg := flag.Int("i", 5, "num iterations for branch length iteration")
 	genArg := flag.Int("gen", 5000, "number of MCMC generations to run")
 	brPrior := flag.String("blpr", "0", "\tspecifies the prior to place on branch lengths. \n\tOptions:\n\n\t\t0    Flat\n\t\t1    Exponential (mean = 10)\n")
 	fosArg := flag.String("fos", "", "file containing names of fossil tips\n\ttips should be comma-separated")
@@ -39,6 +39,10 @@ func main() {
 	for _, i := range strings.Split(*fosArg, ",") {
 		fosSlice = append(fosSlice, i)
 	}
+	//TODO: work these in in a more reasonable way
+	nodes := tree.PreorderArray()
+	cophymaru.InitMissingValues(nodes)
+	cophymaru.MissingTraitsEM(tree, *iterArg)
 	if *startArg == "0" {
 		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg)
 		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)

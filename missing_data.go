@@ -1,10 +1,12 @@
 package cophymaru
 
-//MakeMissingMeansArray will find the missing sites in a data matrix and plug in values corresponding to the mean of the remaining sites
-func MakeMissingMeansArray(tree []*Node) {
+//InitMissingValues will find the missing sites in a data matrix and plug in values corresponding to the mean of the remaining sites
+func InitMissingValues(tree []*Node) {
 	means := CalcSiteMeans(tree)
 	for _, n := range tree {
-		MakeMissingMeansTip(n, means)
+		if len(n.CHLD) == 0 {
+			MakeMissingMeansTip(n, means)
+		}
 	}
 }
 
@@ -25,6 +27,9 @@ func CalcSiteMeans(nodes []*Node) (siteSum []float64) {
 		ntraits = append(ntraits, 0)
 	}
 	for _, n := range nodes {
+		if len(n.CHLD) != 0 {
+			continue
+		}
 		for i, tr := range n.CONTRT {
 			if n.MIS[i] != true {
 				siteSum[i] += tr
@@ -32,18 +37,19 @@ func CalcSiteMeans(nodes []*Node) (siteSum []float64) {
 			}
 		}
 	}
-	for i, m := range siteSum {
-		m = m / float64(ntraits[i])
+	for i := range siteSum {
+		siteSum[i] = siteSum[i] / float64(ntraits[i])
 	}
 	return
 }
 
 //MissingTraitsEM will iteratively calculate the ML branch lengths for a particular topology
 func MissingTraitsEM(tree *Node, niter int) {
-	assertUnrootedTree(tree)
+	AssertUnrootedTree(tree)
 	itercnt := 0
 	for {
-		calcBMLengths(tree)
+		calcExpectedTraits(tree)
+		CalcBMLengths(tree)
 		itercnt++
 		if itercnt == niter {
 			break
