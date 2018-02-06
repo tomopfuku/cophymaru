@@ -1,1 +1,1 @@
-# go-cophy-maru
+# cophymaru
