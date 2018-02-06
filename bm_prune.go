@@ -203,66 +203,68 @@ func CalcRootedLogLike(n *Node, nlikes *float64) {
 func TritomyML(tree *Node) {
 	ntraits := len(tree.CHLD[0].CONTRT)
 	fntraits := float64(ntraits)
-	var temp_v1, temp_v2, temp_v3, x1, x2, x3 float64
-	temp_v1 = 0.0
-	temp_v2 = 0.0
-	temp_v3 = 0.0
+	var x1, x2, x3 float64
+	sumV1 := 0.0
+	sumV2 := 0.0
+	sumV3 := 0.0
 	for i := range tree.CHLD[0].CONTRT {
 		x1 = tree.CHLD[0].CONTRT[i]
 		x2 = tree.CHLD[1].CONTRT[i]
 		x3 = tree.CHLD[2].CONTRT[i]
-		temp_v1 += ((x1 - x2) * (x1 - x3))
-		temp_v2 += ((x2 - x1) * (x2 - x3))
-		temp_v3 += ((x3 - x1) * (x3 - x2))
+		sumV1 += ((x1 - x2) * (x1 - x3))
+		sumV2 += ((x2 - x1) * (x2 - x3))
+		sumV3 += ((x3 - x1) * (x3 - x2))
 	}
-	if temp_v1 < 0.0 {
-		temp_v1 = 0.000001
-		temp_v2 = 0.0
-		temp_v3 = 0.0
-		for i, _ := range tree.CHLD[0].CONTRT {
+	if sumV1 < 0.0 {
+		sumV1 = 0.000001
+		sumV2 = 0.0
+		sumV3 = 0.0
+		for i := range tree.CHLD[0].CONTRT {
 			x1 = tree.CHLD[0].CONTRT[i]
 			x2 = tree.CHLD[1].CONTRT[i]
 			x3 = tree.CHLD[2].CONTRT[i]
-			temp_v2 += (x1 - x2) * (x1 - x2)
-			temp_v3 += (x1 - x3) * (x1 - x3)
+			sumV2 += (x1 - x2) * (x1 - x2)
+			sumV3 += (x1 - x3) * (x1 - x3)
 		}
-	} else if temp_v2 < 0.0 {
-		temp_v1 = 0.0
-		temp_v2 = 0.00001
-		temp_v3 = 0.0
-		for i, _ := range tree.CHLD[0].CONTRT {
+	} else if sumV2 < 0.0 {
+		sumV1 = 0.0
+		sumV2 = 0.00001
+		sumV3 = 0.0
+		for i := range tree.CHLD[0].CONTRT {
 			x1 = tree.CHLD[0].CONTRT[i]
 			x2 = tree.CHLD[1].CONTRT[i]
 			x3 = tree.CHLD[2].CONTRT[i]
-			temp_v1 += (x2 - x1) * (x2 - x1)
-			temp_v3 += (x2 - x3) * (x2 - x3)
+			sumV1 += (x2 - x1) * (x2 - x1)
+			sumV3 += (x2 - x3) * (x2 - x3)
 		}
-	} else if temp_v3 < 0.0 {
-		temp_v1 = 0.0
-		temp_v2 = 0.0
-		temp_v3 = 0.0001
-		for i, _ := range tree.CHLD[0].CONTRT {
+	} else if sumV3 < 0.0 {
+		sumV1 = 0.0
+		sumV2 = 0.0
+		sumV3 = 0.0001
+		for i := range tree.CHLD[0].CONTRT {
 			x1 = tree.CHLD[0].CONTRT[i]
 			x2 = tree.CHLD[1].CONTRT[i]
 			x3 = tree.CHLD[2].CONTRT[i]
-			temp_v1 += (x3 - x1) * (x3 - x1)
-			temp_v2 += (x3 - x2) * (x3 - x2)
+			sumV1 += (x3 - x1) * (x3 - x1)
+			sumV2 += (x3 - x2) * (x3 - x2)
 		}
 	}
-	temp_v1 = temp_v1 / fntraits
-	temp_v2 = temp_v2 / fntraits
-	temp_v3 = temp_v3 / fntraits
-	temp_v1 = temp_v1 - (tree.CHLD[0].PRNLEN - tree.CHLD[0].LEN)
-	temp_v2 = temp_v2 - (tree.CHLD[1].PRNLEN - tree.CHLD[1].LEN)
-	temp_v3 = temp_v3 - (tree.CHLD[2].PRNLEN - tree.CHLD[2].LEN)
-	if temp_v1 <= float64(0.0001) {
-		temp_v1 = 0.0001
-	} else if temp_v2 <= float64(0.0001) {
-		temp_v2 = 0.0001
-	} else if temp_v3 <= float64(0.0001) {
-		temp_v3 = 0.0001
+	sumV1 = sumV1 / fntraits
+	sumV2 = sumV2 / fntraits
+	sumV3 = sumV3 / fntraits
+	sumV1 = sumV1 - (tree.CHLD[0].PRNLEN - tree.CHLD[0].LEN)
+	sumV2 = sumV2 - (tree.CHLD[1].PRNLEN - tree.CHLD[1].LEN)
+	sumV3 = sumV3 - (tree.CHLD[2].PRNLEN - tree.CHLD[2].LEN)
+	if sumV1 < 0. {
+		sumV1 = 0.0001
 	}
-	tree.CHLD[0].LEN = temp_v1
-	tree.CHLD[1].LEN = temp_v2
-	tree.CHLD[2].LEN = temp_v3
+	if sumV2 < 0. {
+		sumV2 = 0.0001
+	}
+	if sumV3 < 0. {
+		sumV3 = 0.0001
+	}
+	tree.CHLD[0].LEN = sumV1
+	tree.CHLD[1].LEN = sumV2
+	tree.CHLD[2].LEN = sumV3
 }

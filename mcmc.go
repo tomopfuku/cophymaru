@@ -131,8 +131,8 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node) (float64, float64) {
 	fn := drawRandomNode(fnodes) //draw a random fossil tip
 	reattach := drawRandomReattachment(fn, nodes)
-	x, p, lastn := pruneFossilTip(fn)
-	r := graftFossilTip(fn.PAR, reattach)
+	x, p, lastn := PruneFossilTip(fn)
+	r := GraftFossilTip(fn.PAR, reattach)
 	propRat := r / (x * p)
 	llstar := CalcUnrootedLogLike(tree)
 	lpstar := math.Log(1.)
@@ -144,8 +144,8 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node) (f
 		ll = llstar
 		lp = lpstar
 	} else { //move fossil back to its previous position and restore old branch lengths
-		pruneFossilTip(fn)
-		graftFossilTip(fn.PAR, lastn)
+		PruneFossilTip(fn)
+		GraftFossilTip(fn.PAR, lastn)
 		lastn.LEN = x
 		fn.PAR.LEN = p
 	}
@@ -200,7 +200,7 @@ func drawRandomReattachment(fn *Node, nodes []*Node) (rnode *Node) {
 //TODO: should probably combine these two into a single SPR move function
 //this removes a fossil tip, along with its parent node from a tree, returning the new branch length left by the gap
 //return value is for calculating proposal ratio later
-func pruneFossilTip(tip *Node) (x, p float64, lastn *Node) {
+func PruneFossilTip(tip *Node) (x, p float64, lastn *Node) {
 	var n *Node
 	newpar := tip.PAR
 	for _, chd := range newpar.CHLD {
@@ -219,8 +219,8 @@ func pruneFossilTip(tip *Node) (x, p float64, lastn *Node) {
 	return
 }
 
-//this reattaches a fossil tip to branch n at a random point
-func graftFossilTip(newpar *Node, n *Node) float64 {
+//GraftFossilTip reattaches a fossil tip to branch n at a random point
+func GraftFossilTip(newpar *Node, n *Node) float64 {
 	r := n.LEN
 	n.PAR.AddChild(newpar)
 	n.PAR.RemoveChild(n)

@@ -43,7 +43,11 @@ func main() {
 		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg)
 		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
 	} else if *startArg == "1" {
+		cophymaru.MakeRandomStartingBranchLengths(tree)
 		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg)
+		cophymaru.IterateBMLengths(tree, *iterArg)
+		fmt.Println("START: ", tree.Newick(true))
+
 	}
 	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior)
 }

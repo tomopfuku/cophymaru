@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-//"time"
+//TODO: this has a bug somewhere. need to track it down at some point.
 
 //InsertFossilTaxa finds the ML placement of a set of fossils via stepwise addition
 func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, iter int) (besttr string, bestll float64) {
@@ -26,13 +26,12 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
 		}
-
 		bestll = -1000000000000.0
 		besttr = ""
 		curll := float64(0.0)
 		var bestPlace *Node
 		for _, n := range nodes[1:] {
-			GraftTip(newpar, n)
+			GraftFossilTip(newpar, n)
 			//fmt.Println(tree.Newick(true))
 			//start := time.Now()
 			IterateBMLengths(tree, iter)
@@ -44,12 +43,14 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 				besttr = tree.Newick(true)
 				bestPlace = n
 			}
+			//fmt.Println(curll)
+			//fmt.Println(tree.Newick(true))
 			PruneTip(newpar, n)
 		}
 		//fmt.Println(bestll,besttr)
-		GraftTip(newpar, bestPlace)
+		GraftFossilTip(newpar, bestPlace)
 		IterateBMLengths(tree, iter)
-		nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
+		//nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
 		//fmt.Println(tree.Newick(true))
 	}
 	return
@@ -72,8 +73,9 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
 		}
 		reattach := randomNode(nodes[1:])
-		GraftTip(newpar, reattach)
+		GraftFossilTip(newpar, reattach)
 		//IterateBMLengths(tree, iter)
+
 		nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
 	}
 }
