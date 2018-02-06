@@ -102,10 +102,10 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 		lp = ExponentialBranchLengthLogPrior(nodes, 10.)
 	}
 	for i := 0; i < gen; i++ {
-		if i%5 == 0 {
+		if i%3 == 0 {
 			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree)
 		}
-		if i%5 != 0 {
+		if i%3 != 0 {
 			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior) //NOTE uncomment to sample BRLENS
 		}
 		if i%10 == 0 {

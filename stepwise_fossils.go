@@ -73,7 +73,7 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 		}
 		reattach := randomNode(nodes[1:])
 		GraftTip(newpar, reattach)
-		IterateBMLengths(tree, iter)
+		//IterateBMLengths(tree, iter)
 		nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
 	}
 }

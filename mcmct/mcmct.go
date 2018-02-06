@@ -23,9 +23,9 @@ func main() {
 	traitArg := flag.String("m", "", "continuous traits")
 	iterArg := flag.Int("i", 1, "num iterations for branch length calculation")
 	genArg := flag.Int("gen", 5000, "number of MCMC generations to run")
-	brPrior := flag.String("blpr", "0", "specifies the prior to place on branch lengths. \nOptions:\n\n0    Flat\n1    Exponential (mean = 10)\n")
-	fosArg := flag.String("fos", "", "file containing names of fossil tips\ntips should be comma-separated")
-	startArg := flag.String("st", "0", "Specify whether to use ML or random starting tree and branch lengths\n0    ML\n1    random\n")
+	brPrior := flag.String("blpr", "0", "\tspecifies the prior to place on branch lengths. \n\tOptions:\n\n\t\t0    Flat\n\t\t1    Exponential (mean = 10)\n")
+	fosArg := flag.String("fos", "", "file containing names of fossil tips\n\ttips should be comma-separated")
+	startArg := flag.String("st", "0", "\tSpecify whether to use ML or random starting tree and branch lengths\n\t\t0    ML\n\t\t1    random\n")
 	flag.Parse()
 	//var ntax,ntraits int
 	nwk := cophy.ReadLine(*treeArg)[0]
