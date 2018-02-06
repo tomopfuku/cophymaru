@@ -31,9 +31,30 @@ func BMPruneRooted(n *Node) {
 		bot := ((1.0 / c0.PRNLEN) + (1.0 / c1.PRNLEN))
 		n.PRNLEN += 1.0 / bot
 		for i, _ := range n.CHLD[0].CONTRT {
-			temp_charst = (((1 / c0.PRNLEN) * c0.CONTRT[i]) + ((1 / c1.PRNLEN) * c1.CONTRT[i])) / bot
+			temp_charst = (((1 / c0.PRNLEN) * c1.CONTRT[i]) + ((1 / c1.PRNLEN) * c0.CONTRT[i])) / bot
 			n.CONTRT[i] = temp_charst
 		}
+	}
+}
+
+//BMPruneRootedSingle will prune BM branch lens and calculate PIC of a single trait down to a rooted node
+//root node should be a real (ie. bifurcating) root
+func BMPruneRootedSingle(n *Node, i int) {
+	for _, chld := range n.CHLD {
+		BMPruneRootedSingle(chld, i)
+	}
+	n.PRNLEN = n.LEN
+	nchld := len(n.CHLD)
+	if nchld != 0 { //&& n.MRK == false {
+		if nchld != 2 {
+			fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
+		}
+		c0 := n.CHLD[0]
+		c1 := n.CHLD[1]
+		bot := ((1.0 / c0.PRNLEN) + (1.0 / c1.PRNLEN))
+		n.PRNLEN += 1.0 / bot
+		tempCharacter := (((1 / c0.PRNLEN) * c1.CONTRT[i]) + ((1 / c1.PRNLEN) * c0.CONTRT[i])) / bot
+		n.CONTRT[i] = tempCharacter
 	}
 }
 
