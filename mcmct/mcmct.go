@@ -5,13 +5,13 @@ this is going to test BM pruning functions
 */
 
 import (
-	"cophy"
+	"cophymaru"
 	"flag"
 	"fmt"
 	"strings"
 )
 
-func postorder(curnode *cophy.Node) {
+func postorder(curnode *cophymaru.Node) {
 	for _, chld := range curnode.CHLD {
 		postorder(chld)
 	}
@@ -28,22 +28,22 @@ func main() {
 	startArg := flag.String("st", "0", "\tSpecify whether to use ML or random starting tree and branch lengths\n\t\t0    ML\n\t\t1    random\n")
 	flag.Parse()
 	//var ntax,ntraits int
-	nwk := cophy.ReadLine(*treeArg)[0]
-	tree := cophy.ReadTree(nwk)
+	nwk := cophymaru.ReadLine(*treeArg)[0]
+	tree := cophymaru.ReadTree(nwk)
 	fmt.Println(tree.Newick(true))
-	traits, ntax, ntraits := cophy.ReadContinuous(*traitArg)
+	traits, ntax, ntraits := cophymaru.ReadContinuous(*traitArg)
 	fmt.Println(ntax)
-	cophy.MapContinuous(tree, traits, ntraits)
-	//cophy.IterateBMLengths(tree,*iterArg)
+	cophymaru.MapContinuous(tree, traits, ntraits)
+	//cophymaru.IterateBMLengths(tree,*iterArg)
 	var fosSlice []string // read in fossil names from command line
 	for _, i := range strings.Split(*fosArg, ",") {
 		fosSlice = append(fosSlice, i)
 	}
 	if *startArg == "0" {
-		starttr, startll := cophy.InsertFossilTaxa(tree, traits, fosSlice, *iterArg)
+		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg)
 		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
 	} else if *startArg == "1" {
-		cophy.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg)
+		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg)
 	}
-	cophy.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior)
+	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior)
 }

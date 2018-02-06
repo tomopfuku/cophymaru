@@ -1,4 +1,4 @@
-package cophy
+package cophymaru
 
 import (
 	"bytes"

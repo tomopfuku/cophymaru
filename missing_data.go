@@ -1,4 +1,4 @@
-package cophy
+package cophymaru
 
 //MakeMissingMeansArray will find the missing sites in a data matrix and plug in values corresponding to the mean of the remaining sites
 func MakeMissingMeansArray(tree []*Node) {
