@@ -8,7 +8,7 @@ import (
 //TODO: this has a bug somewhere. need to track it down at some point.
 
 //InsertFossilTaxa finds the ML placement of a set of fossils via stepwise addition
-func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, iter int) (besttr string, bestll float64) {
+func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, iter int, missing bool) (besttr string, bestll float64) {
 	nodes := tree.PreorderArray()
 	//TODO: get this missing data stuff up and running
 	//trMeans := CalcSiteMeans(nodes)
@@ -34,7 +34,11 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 			GraftFossilTip(newpar, n)
 			//fmt.Println(tree.Newick(true))
 			//start := time.Now()
-			IterateBMLengths(tree, iter)
+			if missing == false {
+				IterateBMLengths(tree, iter)
+			} else if missing == true {
+				MissingTraitsEM(tree, iter)
+			}
 			//end := time.Now()
 			//fmt.Println(end.Sub(start))
 			curll = CalcUnrootedLogLike(tree)
@@ -57,7 +61,7 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 }
 
 //InsertFossilTaxaRandom will randomly insert all of the fossil taxa in a dadaset
-func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []string, iter int) {
+func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []string, iter int, missing bool) {
 	nodes := tree.PreorderArray()
 	for _, curFos := range fosNms {
 		ftip := new(Node)
@@ -74,9 +78,12 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 		}
 		reattach := randomNode(nodes[1:])
 		GraftFossilTip(newpar, reattach)
-		//IterateBMLengths(tree, iter)
-
 		nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
+	}
+	if missing == false {
+		IterateBMLengths(tree, iter)
+	} else if missing == true {
+		MissingTraitsEM(tree, iter)
 	}
 }
 

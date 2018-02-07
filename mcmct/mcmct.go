@@ -39,16 +39,14 @@ func main() {
 	for _, i := range strings.Split(*fosArg, ",") {
 		fosSlice = append(fosSlice, i)
 	}
-	//TODO: work these in in a more reasonable way
-	nodes := tree.PreorderArray()
-	cophymaru.InitMissingValues(nodes)
+
 	cophymaru.MissingTraitsEM(tree, *iterArg)
 	if *startArg == "0" {
-		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg)
+		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg, true)
 		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
 	} else if *startArg == "1" {
 		cophymaru.MakeRandomStartingBranchLengths(tree)
-		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg)
+		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg, true)
 		cophymaru.IterateBMLengths(tree, *iterArg)
 		fmt.Println("START: ", tree.Newick(true))
 

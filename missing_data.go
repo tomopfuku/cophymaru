@@ -43,21 +43,8 @@ func CalcSiteMeans(nodes []*Node) (siteSum []float64) {
 	return
 }
 
-//MissingTraitsEM will iteratively calculate the ML branch lengths for a particular topology
-func MissingTraitsEM(tree *Node, niter int) {
-	AssertUnrootedTree(tree)
-	itercnt := 0
-	for {
-		calcExpectedTraits(tree)
-		CalcBMLengths(tree)
-		itercnt++
-		if itercnt == niter {
-			break
-		}
-	}
-}
-
-func calcExpectedTraits(tree *Node) {
+//CalcExpectedTraits will plug in the expected values for missing traits under BM using the pruning/PIC ancestral state estimation approach
+func CalcExpectedTraits(tree *Node) {
 	rnodes := tree.PreorderArray()
 	lnode := 0
 	var expect float64
