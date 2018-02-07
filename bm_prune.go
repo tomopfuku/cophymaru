@@ -157,7 +157,36 @@ func PruneToStar(tree *Node) {
 */
 //fmt.Println("LL",L)
 
-//CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree assuming that traits are completely sampled
+//CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This _can_ be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
+func CalcUnrootedLogLike(tree *Node) (chll float64) {
+	chll = 0.0
+	for _, ch := range tree.CHLD {
+		curlike := 0.0
+		CalcRootedLogLike(ch, &curlike)
+		chll += curlike
+	}
+	sitelikes := 0.0
+	var tmpll float64
+	var contrast, curVar float64
+	for i := range tree.CHLD[0].CONTRT {
+		tmpll = 0.
+		if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false { //do the standard calculation when no subtrees have missing traits
+			contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
+			curVar = tree.CHLD[0].LEN
+			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+			tmpPRNLEN := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].PRNLEN) / (tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN))
+			tmpChar := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].CONTRT[i]) + (tree.CHLD[1].PRNLEN * tree.CHLD[0].CONTRT[i])) / curVar
+			contrast = tmpChar - tree.CHLD[2].CONTRT[i]
+			curVar = tree.CHLD[2].PRNLEN + tmpPRNLEN
+			tmpll += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		}
+		sitelikes += tmpll
+	}
+	chll += sitelikes
+	return
+}
+
+/*/CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree assuming that traits are completely sampled
 func CalcUnrootedLogLike(tree *Node) (chll float64) {
 	chll = 0.0
 	for _, ch := range tree.CHLD {
@@ -174,7 +203,7 @@ func CalcUnrootedLogLike(tree *Node) (chll float64) {
 	var12 := (cdiv * math.Log(v12))
 	csum := float64(0.0)
 	lsum := float64(0.0)
-	for i, _ := range tree.CHLD[0].CONTRT {
+	for i := range tree.CHLD[0].CONTRT {
 		csum += math.Pow((tree.CHLD[0].CONTRT[i]-tree.CHLD[1].CONTRT[i]), 2) / v12
 		lsum += tree.CHLD[2].CONTRT[i] - ((tree.CHLD[1].LEN*tree.CHLD[0].CONTRT[i])+(tree.CHLD[0].LEN*tree.CHLD[1].CONTRT[i]))/(v12)
 	}
@@ -187,10 +216,10 @@ func CalcUnrootedLogLike(tree *Node) (chll float64) {
 	lsum = math.Pow(lsum, 2)
 	last := lsum / v32 / 2.
 	lbot := nconst - var12 - csum - nconst - d - last
-	//fmt.Println(lbot)
 	chll += lbot
 	return
 }
+*/
 
 //CalcRootedLogLike will return the BM likelihood of a tree assuming that no data are missing from the tips.
 func CalcRootedLogLike(n *Node, nlikes *float64) {
@@ -226,42 +255,34 @@ func MissingUnrootedLogLike(tree *Node) (chll float64) {
 	for _, ch := range tree.CHLD {
 		chll += MissingRootedLogLike(ch)
 	}
-	csum := float64(0.0)
-	lsum := float64(0.0)
 	sitelikes := 0.0
+	var tmpll float64
 	var contrast, curVar float64
 	for i := range tree.CHLD[0].CONTRT {
+		tmpll = 0.
 		if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false { //do the standard calculation when no subtrees have missing traits
-			cdiv := (float64(len(tree.CHLD[0].CONTRT)) / 2.)
-			nconst := -(math.Log(2*math.Pi) * cdiv)
-			v1 := tree.CHLD[0].PRNLEN
-			v2 := tree.CHLD[1].PRNLEN
-			v3 := tree.CHLD[2].PRNLEN
-			v12 := v1 + v2
-			var12 := (cdiv * math.Log(v12))
-			csum += math.Pow((tree.CHLD[0].CONTRT[i]-tree.CHLD[1].CONTRT[i]), 2) / v12
-			lsum += tree.CHLD[2].CONTRT[i] - ((tree.CHLD[1].PRNLEN*tree.CHLD[0].CONTRT[i])+(tree.CHLD[0].PRNLEN*tree.CHLD[1].CONTRT[i]))/(v12)
-			csum = csum / 2.
-			v1timesv2 := v1 * v2
-			v32 := v3 + (v1timesv2 / v12)
-			d := cdiv * math.Log(v32)
-			lsum = math.Pow(lsum, 2)
-			last := lsum / v32 / 2.
-			lbot := nconst - var12 - csum - nconst - d - last
-			sitelikes += lbot
+			contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
+			curVar = tree.CHLD[0].LEN
+			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+			tmpPRNLEN := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].PRNLEN) / (tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN))
+			tmpChar := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].CONTRT[i]) + (tree.CHLD[1].PRNLEN * tree.CHLD[0].CONTRT[i])) / curVar
+			contrast = tmpChar - tree.CHLD[2].CONTRT[i]
+			curVar = tree.CHLD[2].PRNLEN + tmpPRNLEN
+			tmpll += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 		} else if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == true { // do standard "rooted" calculation on CHLD[0] and CHLD [1] if CHLD[2] is missing
 			contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
-			curVar = tree.CHLD[0].LEN + tree.CHLD[1].LEN
-			sitelikes += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+			curVar = tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN
+			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 		} else if tree.CHLD[0].MIS[i] == false && tree.CHLD[2].MIS[i] == false && tree.CHLD[1].MIS[i] == true { // do standard "rooted" calculation on CHLD[0] and CHLD [2] if CHLD[1] is missing
 			contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[2].CONTRT[i]
-			curVar = tree.CHLD[0].LEN + tree.CHLD[2].LEN
-			sitelikes += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+			curVar = tree.CHLD[0].PRNLEN + tree.CHLD[2].PRNLEN
+			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 		} else if tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false && tree.CHLD[0].MIS[i] == true { // do standard "rooted" calculation on CHLD[1] and CHLD [2] if CHLD[0] is missing
 			contrast = tree.CHLD[1].CONTRT[i] - tree.CHLD[2].CONTRT[i]
-			curVar = tree.CHLD[1].LEN + tree.CHLD[2].LEN
-			sitelikes += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+			curVar = tree.CHLD[1].PRNLEN + tree.CHLD[2].PRNLEN
+			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 		}
+		sitelikes += tmpll
 	}
 	chll += sitelikes
 	return
@@ -274,15 +295,15 @@ func MissingRootedLogLike(n *Node) (sitelikes float64) {
 	sitelikes = 0.
 	nodelikes := 0.
 	for site := range nodes[0].CONTRT {
+		nodelikes = 0.
 		for _, node := range nodes {
 			node.PRNLEN = node.LEN
 			if len(node.CHLD) == 0 {
 				continue
 			}
-			AssertNumMis(node.CHLD[0].MIS, node.CHLD[1].MIS, node)
 			if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == false {
 				contrast = node.CHLD[0].CONTRT[site] - node.CHLD[1].CONTRT[site]
-				curVar = node.CHLD[0].LEN + node.CHLD[1].LEN
+				curVar = node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN
 				nodelikes += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 				node.CONTRT[site] = ((node.CHLD[0].PRNLEN * node.CHLD[1].CONTRT[site]) + (node.CHLD[1].PRNLEN * node.CHLD[0].CONTRT[site])) / curVar
 				node.PRNLEN += ((node.CHLD[0].PRNLEN * node.CHLD[1].PRNLEN) / (node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN))

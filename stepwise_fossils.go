@@ -54,7 +54,11 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 		}
 		//fmt.Println(bestll,besttr)
 		GraftFossilTip(newpar, bestPlace)
-		IterateBMLengths(tree, iter)
+		if missing == false {
+			IterateBMLengths(tree, iter)
+		} else if missing == true {
+			MissingTraitsEM(tree, iter)
+		}
 		//nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
 		//fmt.Println(tree.Newick(true))
 	}

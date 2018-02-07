@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 )
 
 func postorder(curnode *cophymaru.Node) {
@@ -26,6 +27,8 @@ func main() {
 	brPrior := flag.String("blpr", "0", "\tspecifies the prior to place on branch lengths. \n\tOptions:\n\n\t\t0    Flat\n\t\t1    Exponential (mean = 10)\n")
 	fosArg := flag.String("fos", "", "file containing names of fossil tips\n\ttips should be comma-separated")
 	startArg := flag.String("st", "0", "\tSpecify whether to use ML or random starting tree and branch lengths\n\t\t0    ML\n\t\t1    random\n")
+	missingArg := flag.Bool("mis", true, "indicate whether the character matrix contains missing sites.")
+	printFreqArg := flag.Int("pr", 1000, "Frequency with which to print to the screen")
 	flag.Parse()
 	//var ntax,ntraits int
 	nwk := cophymaru.ReadLine(*treeArg)[0]
@@ -40,15 +43,19 @@ func main() {
 		fosSlice = append(fosSlice, i)
 	}
 
-	//cophymaru.MissingTraitsEM(tree, *iterArg)
 	if *startArg == "0" {
-		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg, true)
+		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg, *missingArg)
 		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
 	} else if *startArg == "1" {
 		cophymaru.MakeRandomStartingBranchLengths(tree)
-		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg, true)
+		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg, *missingArg)
 		fmt.Println("START: ", tree.Newick(true))
-
 	}
-	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior, false)
+	l1 := cophymaru.CalcUnrootedLogLike(tree)
+	l2 := cophymaru.MissingUnrootedLogLike(tree)
+	fmt.Println(l1, l2)
+	start := time.Now()
+	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior, *missingArg, *printFreqArg)
+	elapsed := time.Since(start)
+	fmt.Println(elapsed)
 }

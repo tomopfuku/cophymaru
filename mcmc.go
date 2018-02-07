@@ -74,7 +74,7 @@ func initOutfile(flnm string) *bufio.Writer {
 }
 
 //MCMC will run Markov Chain Monte Carlo simulations, adjusting branch lengths and fossil placements
-func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, branchPrior string, missing bool) {
+func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, branchPrior string, missing bool, prFreq int) {
 	f, err := os.Create(treeOutFile)
 	if err != nil {
 		log.Fatal(err)
@@ -106,11 +106,14 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 		lp = ExponentialBranchLengthLogPrior(nodes, 10.)
 	}
 	for i := 0; i < gen; i++ {
-		if i%3 == 0 {
+		if i%5 == 0 {
 			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, missing)
 		}
-		if i%3 != 0 {
+		if i%5 != 0 {
 			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing) //NOTE uncomment to sample BRLENS
+		}
+		if i%prFreq == 0 {
+			fmt.Println(i)
 		}
 		if i%10 == 0 {
 			fmt.Fprint(lw, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\t")
@@ -119,7 +122,7 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 			}
 			fmt.Fprint(lw, "\n")
 			//writeTreeFile(tree.Newick(true),w)
-			fmt.Fprint(w, "tree rep. "+strconv.Itoa(i)+" = "+tree.Newick(true)+"\n")
+			fmt.Fprint(w, tree.Newick(true)+";\n")
 		}
 	}
 	lw.Flush()
@@ -142,6 +145,7 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, mi
 	if missing == false {
 		llstar = CalcUnrootedLogLike(tree)
 	} else if missing == true {
+
 		llstar = MissingUnrootedLogLike(tree)
 	}
 	lpstar := math.Log(1.)
