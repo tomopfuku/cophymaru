@@ -88,6 +88,7 @@ func MapContinuous(t *Node, traits map[string][]float64, ntraits int) {
 				break
 			}
 			t.CONTRT = append(t.CONTRT, z)
+			t.MIS = append(t.MIS, false)
 			count++
 		}
 	}

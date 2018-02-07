@@ -74,7 +74,7 @@ func initOutfile(flnm string) *bufio.Writer {
 }
 
 //MCMC will run Markov Chain Monte Carlo simulations, adjusting branch lengths and fossil placements
-func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, branchPrior string) {
+func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, branchPrior string, missing bool) {
 	f, err := os.Create(treeOutFile)
 	if err != nil {
 		log.Fatal(err)
@@ -94,8 +94,12 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 			inNodes = append(inNodes, n)
 		}
 	}
-	ll := CalcUnrootedLogLike(tree)
-	var lp float64
+	var lp, ll float64
+	if missing == false {
+		ll = CalcUnrootedLogLike(tree)
+	} else if missing == true {
+		ll = MissingUnrootedLogLike(tree)
+	}
 	if branchPrior == "0" {
 		lp = math.Log(1.) //ExponentialBranchLengthLogPrior(nodes,10.)
 	} else if branchPrior == "1" {
@@ -103,10 +107,10 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 	}
 	for i := 0; i < gen; i++ {
 		if i%3 == 0 {
-			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree)
+			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, missing)
 		}
 		if i%3 != 0 {
-			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior) //NOTE uncomment to sample BRLENS
+			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing) //NOTE uncomment to sample BRLENS
 		}
 		if i%10 == 0 {
 			fmt.Fprint(lw, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\t")
@@ -115,7 +119,7 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 			}
 			fmt.Fprint(lw, "\n")
 			//writeTreeFile(tree.Newick(true),w)
-			fmt.Fprint(w, tree.Newick(true)+"\n")
+			fmt.Fprint(w, "tree rep. "+strconv.Itoa(i)+" = "+tree.Newick(true)+"\n")
 		}
 	}
 	lw.Flush()
@@ -128,13 +132,18 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 
 //this move prunes and regrafts a fossil, creating random variables for the altered branch lengths
 //the procedure is basically the same as the SPR move as described in the Yang (2014) Mol. Evol. book
-func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node) (float64, float64) {
+func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, missing bool) (float64, float64) {
 	fn := drawRandomNode(fnodes) //draw a random fossil tip
 	reattach := drawRandomReattachment(fn, nodes)
 	x, p, lastn := PruneFossilTip(fn)
 	r := GraftFossilTip(fn.PAR, reattach)
 	propRat := r / (x * p)
-	llstar := CalcUnrootedLogLike(tree)
+	var llstar float64
+	if missing == false {
+		llstar = CalcUnrootedLogLike(tree)
+	} else if missing == true {
+		llstar = MissingUnrootedLogLike(tree)
+	}
 	lpstar := math.Log(1.)
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
 	s1 := rand.NewSource(time.Now().UnixNano())
@@ -152,12 +161,17 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node) (f
 	return lp, ll
 }
 
-func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, branchPrior string) (float64, float64) {
+func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, branchPrior string, missing bool) (float64, float64) {
 	updateNode := drawRandomNode(nodes)
 	soldL := updateNode.LEN
 	var propRat float64
 	updateNode.LEN, propRat = singleBrlenMultiplierProp(updateNode.LEN)
-	llstar := CalcUnrootedLogLike(tree)
+	var llstar float64
+	if missing == false {
+		llstar = CalcUnrootedLogLike(tree)
+	} else if missing == true {
+		llstar = MissingUnrootedLogLike(tree)
+	}
 	var lpstar float64
 	if branchPrior == "0" {
 		lpstar = math.Log(1.)

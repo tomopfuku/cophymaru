@@ -40,16 +40,15 @@ func main() {
 		fosSlice = append(fosSlice, i)
 	}
 
-	cophymaru.MissingTraitsEM(tree, *iterArg)
+	//cophymaru.MissingTraitsEM(tree, *iterArg)
 	if *startArg == "0" {
 		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg, true)
 		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
 	} else if *startArg == "1" {
 		cophymaru.MakeRandomStartingBranchLengths(tree)
 		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg, true)
-		cophymaru.IterateBMLengths(tree, *iterArg)
 		fmt.Println("START: ", tree.Newick(true))
 
 	}
-	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior)
+	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior, false)
 }

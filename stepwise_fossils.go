@@ -18,13 +18,14 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 		ftip.NAME = curFos
 		ftip.LEN = 0.01
 		ftip.CONTRT = traits[curFos]
-		//MakeMissingDataSlice(ftip)
+		MakeMissingDataSlice(ftip)
 		//MakeMissingMeansTip(ftip, trMeans) //replace missing traits with the mean value across all sample traits
 		newpar := new(Node)
 		newpar.LEN = 0.01
 		newpar.AddChild(ftip)
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
+			newpar.MIS = append(newpar.MIS, false)
 		}
 		bestll = -1000000000000.0
 		besttr = ""
@@ -75,6 +76,7 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 		newpar.AddChild(ftip)
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
+			newpar.MIS = append(newpar.MIS, false)
 		}
 		reattach := randomNode(nodes[1:])
 		GraftFossilTip(newpar, reattach)

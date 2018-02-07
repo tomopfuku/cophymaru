@@ -99,8 +99,8 @@ func MissingTraitsEM(tree *Node, niter int) {
 	InitMissingValues(nodes)
 	itercnt := 0
 	for {
-		CalcExpectedTraits(tree)
-		calcBMLengths(tree)
+		CalcExpectedTraits(tree) //calculate Expected trait values
+		calcBMLengths(tree)      //maximize likelihood of branch lengths
 		itercnt++
 		if itercnt == niter {
 			break
@@ -279,6 +279,7 @@ func MissingRootedLogLike(n *Node) (sitelikes float64) {
 			if len(node.CHLD) == 0 {
 				continue
 			}
+			AssertNumMis(node.CHLD[0].MIS, node.CHLD[1].MIS, node)
 			if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == false {
 				contrast = node.CHLD[0].CONTRT[site] - node.CHLD[1].CONTRT[site]
 				curVar = node.CHLD[0].LEN + node.CHLD[1].LEN
