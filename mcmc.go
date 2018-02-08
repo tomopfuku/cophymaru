@@ -42,7 +42,7 @@ func getProposedBrlens(nodes []*Node) []float64 {
 	var oldL []float64
 	for _, i := range nodes {
 		oldL = append(oldL, i.LEN)
-		i.LEN = brlenSlidingWindow(i.LEN, 0.1)
+		i.LEN = brlenSlidingWindow(i.LEN, 0.2)
 	}
 	return oldL
 }
@@ -179,6 +179,7 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 	if missing == false {
 		//llstar = CalcUnrootedLogLike(tree, false)
 		llstar = CalcUnrootedLogLike(tree, true)
+		//fmt.Println(ll, llstar)
 	} else if missing == true {
 		//llstar1 := MissingUnrootedLogLike(tree, false)
 		llstar = MissingUnrootedLogLike(tree, true)

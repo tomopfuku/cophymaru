@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 )
@@ -23,7 +24,9 @@ func MakeRandomStartingBranchLengths(tree *Node) {
 func ReadLine(path string) (ln []string) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Println(err)
+		fmt.Println("There was an error when reading in the file:", path, ". Are you sure that it exists?")
+		os.Exit(0)
 	}
 	ss := string(b)
 	ln = strings.Split(ss, "\n")
