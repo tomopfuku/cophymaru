@@ -1,9 +1,5 @@
 package main
 
-/*
-this is going to test BM pruning functions
-*/
-
 import (
 	"cophymaru"
 	"flag"
@@ -28,14 +24,15 @@ func main() {
 	fosArg := flag.String("fos", "", "file containing names of fossil tips\n\ttips should be comma-separated")
 	startArg := flag.String("st", "0", "\tSpecify whether to use ML or random starting tree and branch lengths\n\t\t0    ML\n\t\t1    random\n")
 	missingArg := flag.Bool("mis", true, "indicate whether the character matrix contains missing sites.")
-	printFreqArg := flag.Int("pr", 1000, "Frequency with which to print to the screen")
+	printFreqArg := flag.Int("pr", 100, "Frequency with which to print to the screen")
+	sampFreqArg := flag.Int("samp", 100, "Frequency with which to sample from the chain")
 	flag.Parse()
 	//var ntax,ntraits int
 	nwk := cophymaru.ReadLine(*treeArg)[0]
 	tree := cophymaru.ReadTree(nwk)
-	fmt.Println(tree.Newick(true))
+	fmt.Println("SUCCESSFULY READ IN TREE: ", tree.Newick(true))
 	traits, ntax, ntraits := cophymaru.ReadContinuous(*traitArg)
-	fmt.Println(ntax)
+	fmt.Println("CONTAINING ", ntax, "TAXA")
 	cophymaru.MapContinuous(tree, traits, ntraits)
 	//cophymaru.IterateBMLengths(tree,*iterArg)
 	var fosSlice []string // read in fossil names from command line
@@ -51,11 +48,11 @@ func main() {
 		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg, *missingArg)
 		fmt.Println("START: ", tree.Newick(true))
 	}
-	l1 := cophymaru.CalcUnrootedLogLike(tree)
-	l2 := cophymaru.MissingUnrootedLogLike(tree)
-	fmt.Println(l1, l2)
+	//l1 := cophymaru.CalcUnrootedLogLike(tree, true)
+	//l2 := cophymaru.MissingUnrootedLogLike(tree, true)
+	//fmt.Println(l1, l2)
 	start := time.Now()
-	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior, *missingArg, *printFreqArg)
+	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior, *missingArg, *printFreqArg, *sampFreqArg)
 	elapsed := time.Since(start)
-	fmt.Println(elapsed)
+	fmt.Println("COMPLETED ", *genArg, "MCMC SIMULATIONS IN ", elapsed)
 }

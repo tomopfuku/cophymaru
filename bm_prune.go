@@ -22,7 +22,7 @@ func BMPruneRooted(n *Node) {
 	n.PRNLEN = n.LEN
 	nchld := len(n.CHLD)
 	if nchld != 0 { //&& n.MRK == false {
-		var temp_charst float64
+		var tempChar float64
 		if nchld != 2 {
 			fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
 		}
@@ -30,9 +30,9 @@ func BMPruneRooted(n *Node) {
 		c1 := n.CHLD[1]
 		bot := ((1.0 / c0.PRNLEN) + (1.0 / c1.PRNLEN))
 		n.PRNLEN += 1.0 / bot
-		for i, _ := range n.CHLD[0].CONTRT {
-			temp_charst = (((1 / c0.PRNLEN) * c1.CONTRT[i]) + ((1 / c1.PRNLEN) * c0.CONTRT[i])) / bot
-			n.CONTRT[i] = temp_charst
+		for i := range n.CHLD[0].CONTRT {
+			tempChar = (((1 / c0.PRNLEN) * c1.CONTRT[i]) + ((1 / c1.PRNLEN) * c0.CONTRT[i])) / bot
+			n.CONTRT[i] = tempChar
 		}
 	}
 }
@@ -55,13 +55,6 @@ func BMPruneRootedSingle(n *Node, i int) {
 		n.PRNLEN += 1.0 / bot
 		tempCharacter := (((1 / c0.PRNLEN) * c1.CONTRT[i]) + ((1 / c1.PRNLEN) * c0.CONTRT[i])) / bot
 		n.CONTRT[i] = tempCharacter
-	}
-}
-
-func markChildren(n *Node) {
-	n.MRK = true
-	for _, ch := range n.CHLD {
-		markChildren(ch)
 	}
 }
 
@@ -158,11 +151,11 @@ func PruneToStar(tree *Node) {
 //fmt.Println("LL",L)
 
 //CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This _can_ be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
-func CalcUnrootedLogLike(tree *Node) (chll float64) {
+func CalcUnrootedLogLike(tree *Node, startFresh bool) (chll float64) {
 	chll = 0.0
 	for _, ch := range tree.CHLD {
 		curlike := 0.0
-		CalcRootedLogLike(ch, &curlike)
+		CalcRootedLogLike(ch, &curlike, startFresh)
 		chll += curlike
 	}
 	sitelikes := 0.0
@@ -172,7 +165,7 @@ func CalcUnrootedLogLike(tree *Node) (chll float64) {
 		tmpll = 0.
 		if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false { //do the standard calculation when no subtrees have missing traits
 			contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
-			curVar = tree.CHLD[0].LEN
+			curVar = tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN
 			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 			tmpPRNLEN := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].PRNLEN) / (tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN))
 			tmpChar := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].CONTRT[i]) + (tree.CHLD[1].PRNLEN * tree.CHLD[0].CONTRT[i])) / curVar
@@ -186,74 +179,47 @@ func CalcUnrootedLogLike(tree *Node) (chll float64) {
 	return
 }
 
-/*/CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree assuming that traits are completely sampled
-func CalcUnrootedLogLike(tree *Node) (chll float64) {
-	chll = 0.0
-	for _, ch := range tree.CHLD {
-		curlike := 0.0
-		CalcRootedLogLike(ch, &curlike)
-		chll += curlike
-	}
-	cdiv := (float64(len(tree.CHLD[0].CONTRT)) / 2.)
-	nconst := -(math.Log(2*math.Pi) * cdiv)
-	v1 := tree.CHLD[0].PRNLEN
-	v2 := tree.CHLD[1].PRNLEN
-	v3 := tree.CHLD[2].PRNLEN
-	v12 := v1 + v2
-	var12 := (cdiv * math.Log(v12))
-	csum := float64(0.0)
-	lsum := float64(0.0)
-	for i := range tree.CHLD[0].CONTRT {
-		csum += math.Pow((tree.CHLD[0].CONTRT[i]-tree.CHLD[1].CONTRT[i]), 2) / v12
-		lsum += tree.CHLD[2].CONTRT[i] - ((tree.CHLD[1].LEN*tree.CHLD[0].CONTRT[i])+(tree.CHLD[0].LEN*tree.CHLD[1].CONTRT[i]))/(v12)
-	}
-	//csum = csum/v12
-	csum = csum / 2.
-	v1timesv2 := v1 * v2
-	v32 := v3 + (v1timesv2 / v12)
-	d := cdiv * math.Log(v32)
-	//fmt.Println(lsum)
-	lsum = math.Pow(lsum, 2)
-	last := lsum / v32 / 2.
-	lbot := nconst - var12 - csum - nconst - d - last
-	chll += lbot
-	return
-}
-*/
-
 //CalcRootedLogLike will return the BM likelihood of a tree assuming that no data are missing from the tips.
-func CalcRootedLogLike(n *Node, nlikes *float64) {
+func CalcRootedLogLike(n *Node, nlikes *float64, startFresh bool) {
 	for _, chld := range n.CHLD {
-		CalcRootedLogLike(chld, nlikes)
+		CalcRootedLogLike(chld, nlikes, startFresh)
 	}
-	n.PRNLEN = n.LEN
 	nchld := len(n.CHLD)
-	if nchld != 0 { //&& n.MRK == false {
-		if nchld != 2 {
-			fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
+	if n.MRK == true && startFresh == false {
+		if nchld != 0 {
+			*nlikes += n.LL
 		}
-		c0 := n.CHLD[0]
-		c1 := n.CHLD[1]
-		curlike := float64(0.0)
-		var tempChar float64
-		tempBranchLength := n.PRNLEN + ((c0.PRNLEN * c1.PRNLEN) / (c0.PRNLEN + c1.PRNLEN))
-		for i := range n.CHLD[0].CONTRT {
-			curVar := c0.PRNLEN + c1.PRNLEN
-			contrast := c0.CONTRT[i] - c1.CONTRT[i]
-			curlike += ((-0.5) * ((math.Log(2 * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
-			tempChar = ((c0.PRNLEN * c1.CONTRT[i]) + (c1.PRNLEN * c0.CONTRT[i])) / (curVar)
-			n.CONTRT[i] = tempChar
+	} else if n.MRK == false || startFresh == true {
+		n.PRNLEN = n.LEN
+		if nchld != 0 {
+			if nchld != 2 {
+				fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
+			}
+			c0 := n.CHLD[0]
+			c1 := n.CHLD[1]
+			curlike := float64(0.0)
+			var tempChar float64
+			for i := range n.CHLD[0].CONTRT {
+				curVar := c0.PRNLEN + c1.PRNLEN
+				contrast := c0.CONTRT[i] - c1.CONTRT[i]
+				curlike += ((-0.5) * ((math.Log(2 * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
+				tempChar = ((c0.PRNLEN * c1.CONTRT[i]) + (c1.PRNLEN * c0.CONTRT[i])) / (curVar)
+				n.CONTRT[i] = tempChar
+			}
+			*nlikes += curlike
+			tempBranchLength := n.LEN + ((c0.PRNLEN * c1.PRNLEN) / (c0.PRNLEN + c1.PRNLEN)) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
+			n.PRNLEN = tempBranchLength                                                     // need to calculate the "prune length" by adding the length to the uncertainty
+			n.LL = curlike
+			n.MRK = true
 		}
-		*nlikes += curlike
-		n.PRNLEN = tempBranchLength
 	}
 }
 
 //MissingUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This _can_ be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
-func MissingUnrootedLogLike(tree *Node) (chll float64) {
+func MissingUnrootedLogLike(tree *Node, startFresh bool) (chll float64) {
 	chll = 0.0
 	for _, ch := range tree.CHLD {
-		chll += MissingRootedLogLike(ch)
+		chll += MissingRootedLogLike(ch, startFresh)
 	}
 	sitelikes := 0.0
 	var tmpll float64
@@ -262,7 +228,7 @@ func MissingUnrootedLogLike(tree *Node) (chll float64) {
 		tmpll = 0.
 		if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false { //do the standard calculation when no subtrees have missing traits
 			contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
-			curVar = tree.CHLD[0].LEN
+			curVar = tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN
 			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 			tmpPRNLEN := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].PRNLEN) / (tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN))
 			tmpChar := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].CONTRT[i]) + (tree.CHLD[1].PRNLEN * tree.CHLD[0].CONTRT[i])) / curVar
@@ -289,32 +255,43 @@ func MissingUnrootedLogLike(tree *Node) (chll float64) {
 }
 
 //MissingRootedLogLike will return the BM log-likelihood of a tree for a single site, pruning tips that have missing data
-func MissingRootedLogLike(n *Node) (sitelikes float64) {
+func MissingRootedLogLike(n *Node, startFresh bool) (sitelikes float64) {
 	nodes := n.PostorderArray()
 	var contrast, curVar float64
 	sitelikes = 0.
 	nodelikes := 0.
+	var ll float64
 	for site := range nodes[0].CONTRT {
 		nodelikes = 0.
 		for _, node := range nodes {
-			node.PRNLEN = node.LEN
-			if len(node.CHLD) == 0 {
-				continue
-			}
-			if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == false {
-				contrast = node.CHLD[0].CONTRT[site] - node.CHLD[1].CONTRT[site]
-				curVar = node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN
-				nodelikes += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
-				node.CONTRT[site] = ((node.CHLD[0].PRNLEN * node.CHLD[1].CONTRT[site]) + (node.CHLD[1].PRNLEN * node.CHLD[0].CONTRT[site])) / curVar
-				node.PRNLEN += ((node.CHLD[0].PRNLEN * node.CHLD[1].PRNLEN) / (node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN))
-			} else if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == true {
-				node.PRNLEN += node.CHLD[0].PRNLEN
-				node.CONTRT[site] = node.CHLD[0].CONTRT[site]
-			} else if node.CHLD[1].MIS[site] == false && node.CHLD[0].MIS[site] == true {
-				node.PRNLEN += node.CHLD[1].PRNLEN
-				node.CONTRT[site] = node.CHLD[1].CONTRT[site]
-			} else if node.CHLD[0].MIS[site] == true && node.CHLD[1].MIS[site] == true {
-				node.MIS[site] = true
+			if node.MRK == true && startFresh == false {
+				node.PRNLEN = node.LEN
+				//if len(node.CHLD) != 0 {
+				//	if site == 0 { //add the pre calculated node log likes during the first pass through the tree
+				//		nodelikes += node.LL
+				//	}
+				//}
+			} else if node.MRK == false || startFresh == true { //recalculate if we said to recalculate all likelihoods or if the node is not marked as calculated
+				node.PRNLEN = node.LEN
+				if len(node.CHLD) != 0 {
+					if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == false {
+						contrast = node.CHLD[0].CONTRT[site] - node.CHLD[1].CONTRT[site]
+						curVar = node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN
+						ll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+						nodelikes += ll
+						node.LL += ll
+						node.CONTRT[site] = ((node.CHLD[0].PRNLEN * node.CHLD[1].CONTRT[site]) + (node.CHLD[1].PRNLEN * node.CHLD[0].CONTRT[site])) / curVar
+						node.PRNLEN = node.LEN + ((node.CHLD[0].PRNLEN * node.CHLD[1].PRNLEN) / (node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN))
+					} else if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == true {
+						node.PRNLEN += node.CHLD[0].PRNLEN
+						node.CONTRT[site] = node.CHLD[0].CONTRT[site]
+					} else if node.CHLD[1].MIS[site] == false && node.CHLD[0].MIS[site] == true {
+						node.PRNLEN += node.CHLD[1].PRNLEN
+						node.CONTRT[site] = node.CHLD[1].CONTRT[site]
+					} else if node.CHLD[0].MIS[site] == true && node.CHLD[1].MIS[site] == true {
+						node.MIS[site] = true
+					}
+				}
 			}
 		}
 		sitelikes += nodelikes

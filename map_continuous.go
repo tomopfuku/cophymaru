@@ -27,7 +27,7 @@ func readPhylipHeader(traitfl string) (traits []string, ntax int, ntraits int) {
 	return
 }
 
-// this will read in a PHYLIP-formatted trait file and return a map
+// ReadContinuous will read in a PHYLIP-formatted trait file and return a map
 func ReadContinuous(traitfl string) (map[string][]float64, int, int) {
 	traitlines, ntax, ntraits := readPhylipHeader(traitfl)
 	tm := make(map[string][]float64, ntax)

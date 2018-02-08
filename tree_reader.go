@@ -12,8 +12,9 @@ import (
 
 //}
 
+//ReadTree will parse a newick string into a node struct
 func ReadTree(ts string) (root *Node) {
-	rt := Node{nil, nil, "root", 0., 0., nil, false, nil}
+	rt := Node{nil, nil, "root", 0., 0., nil, false, nil, 0.}
 	x := 0
 	nc := string(ts[x : x+1])
 	start := true
@@ -29,7 +30,7 @@ func ReadTree(ts string) (root *Node) {
 				cn = &rt
 				start = false
 			} else {
-				nn := Node{cn, nil, "", 0., 0.0, nil, false, nil}
+				nn := Node{cn, nil, "", 0., 0.0, nil, false, nil, 0.}
 				cn.AddChild(&nn)
 				cn = &nn
 			}
@@ -69,12 +70,12 @@ func ReadTree(ts string) (root *Node) {
 			}
 			b, err := strconv.ParseFloat(bl.String(), 64)
 			if err != nil {
-				fmt.Printf("There is an error %s in branch length processing\n")
+				fmt.Printf("There is an error in branch length processing\n")
 			}
 			cn.LEN = b
 			x--
 		} else {
-			nn := Node{cn, nil, "", 0., 0., nil, false, nil}
+			nn := Node{cn, nil, "", 0., 0., nil, false, nil, 0.}
 			cn.AddChild(&nn)
 			cn = &nn
 			var nm bytes.Buffer

@@ -74,7 +74,7 @@ func initOutfile(flnm string) *bufio.Writer {
 }
 
 //MCMC will run Markov Chain Monte Carlo simulations, adjusting branch lengths and fossil placements
-func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, branchPrior string, missing bool, prFreq int) {
+func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, branchPrior string, missing bool, prFreq int, sampFreq int) {
 	f, err := os.Create(treeOutFile)
 	if err != nil {
 		log.Fatal(err)
@@ -96,9 +96,9 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 	}
 	var lp, ll float64
 	if missing == false {
-		ll = CalcUnrootedLogLike(tree)
+		ll = CalcUnrootedLogLike(tree, true)
 	} else if missing == true {
-		ll = MissingUnrootedLogLike(tree)
+		ll = MissingUnrootedLogLike(tree, true)
 	}
 	if branchPrior == "0" {
 		lp = math.Log(1.) //ExponentialBranchLengthLogPrior(nodes,10.)
@@ -106,21 +106,23 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 		lp = ExponentialBranchLengthLogPrior(nodes, 10.)
 	}
 	for i := 0; i < gen; i++ {
-		if i%3 == 0 {
+		if i%2 == 0 {
 			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, missing)
 		}
-		if i%3 != 0 {
+		if i%2 != 0 {
 			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing) //NOTE uncomment to sample BRLENS
 		}
 		if i%prFreq == 0 {
 			fmt.Println(i)
 		}
-		if i%10 == 0 {
-			fmt.Fprint(lw, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\t")
-			for _, ln := range nodes {
-				fmt.Fprint(lw, strconv.FormatFloat(ln.LEN, 'f', -1, 64)+"\t")
-			}
-			fmt.Fprint(lw, "\n")
+		if i%sampFreq == 0 {
+			fmt.Fprint(lw, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\n")
+			/*
+				for _, ln := range nodes {
+					fmt.Fprint(lw, strconv.FormatFloat(ln.LEN, 'f', -1, 64)+"\t")
+				}
+				fmt.Fprint(lw, "\n")
+			*/
 			//writeTreeFile(tree.Newick(true),w)
 			fmt.Fprint(w, tree.Newick(true)+";\n")
 		}
@@ -143,10 +145,9 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, mi
 	propRat := r / (x * p)
 	var llstar float64
 	if missing == false {
-		llstar = CalcUnrootedLogLike(tree)
+		llstar = CalcUnrootedLogLike(tree, true)
 	} else if missing == true {
-
-		llstar = MissingUnrootedLogLike(tree)
+		llstar = MissingUnrootedLogLike(tree, true)
 	}
 	lpstar := math.Log(1.)
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
@@ -161,6 +162,9 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, mi
 		GraftFossilTip(fn.PAR, lastn)
 		lastn.LEN = x
 		fn.PAR.LEN = p
+		//fn.UnmarkToRoot(tree)
+		//reattach.UnmarkToRoot(tree)
+		//tree.UnmarkAll()
 	}
 	return lp, ll
 }
@@ -168,13 +172,17 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, mi
 func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, branchPrior string, missing bool) (float64, float64) {
 	updateNode := drawRandomNode(nodes)
 	soldL := updateNode.LEN
+	updateNode.UnmarkToRoot(tree)
 	var propRat float64
 	updateNode.LEN, propRat = singleBrlenMultiplierProp(updateNode.LEN)
 	var llstar float64
 	if missing == false {
-		llstar = CalcUnrootedLogLike(tree)
+		//llstar = CalcUnrootedLogLike(tree, false)
+		llstar = CalcUnrootedLogLike(tree, true)
 	} else if missing == true {
-		llstar = MissingUnrootedLogLike(tree)
+		//llstar1 := MissingUnrootedLogLike(tree, false)
+		llstar = MissingUnrootedLogLike(tree, true)
+		//fmt.Println(llstar, llstar1)
 	}
 	var lpstar float64
 	if branchPrior == "0" {
@@ -190,6 +198,7 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 		ll = llstar
 		lp = lpstar
 	} else {
+		updateNode.UnmarkToRoot(tree)
 		updateNode.LEN = soldL
 	}
 	return lp, ll
@@ -216,7 +225,8 @@ func drawRandomReattachment(fn *Node, nodes []*Node) (rnode *Node) {
 }
 
 //TODO: should probably combine these two into a single SPR move function
-//this removes a fossil tip, along with its parent node from a tree, returning the new branch length left by the gap
+
+//PruneFossilTip removes a fossil tip, along with its parent node from a tree, returning the new branch length left by the gap
 //return value is for calculating proposal ratio later
 func PruneFossilTip(tip *Node) (x, p float64, lastn *Node) {
 	var n *Node

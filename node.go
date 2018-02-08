@@ -3,6 +3,7 @@ package cophymaru
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"strconv"
 )
 
@@ -17,6 +18,7 @@ type Node struct {
 	//VISITED bool
 	MRK bool
 	MIS []bool //this is a slice of bools that indicates whether the index is missing from CONTRT
+	LL  float64
 }
 
 //PostorderArray will return an array of all the nodes in the tree in Postorder
@@ -134,4 +136,33 @@ func (n *Node) Reroot(oldroot *Node) *Node {
 	//newpar = nil
 	n.LEN = 0.0
 	return n
+}
+
+//UnmarkToRoot will mark all of the nodes betwen the current node and the root to be recalculated
+func (n *Node) UnmarkToRoot(oldroot *Node) {
+	if n == oldroot {
+		fmt.Println("you are trying to reroot on the current root!")
+	}
+	curnode := n
+	pathlen := int(0)
+	for {
+		if curnode == oldroot {
+			break
+		}
+		pathlen++
+		curnode = curnode.PAR
+		curnode.MRK = false
+		if pathlen > 2000000 {
+			fmt.Println("something is wrong with the tree. could not walk back to root.")
+			os.Exit(0)
+		}
+	}
+}
+
+//UnmarkAll will unmark all of the nodes on a tree
+func (n *Node) UnmarkAll() {
+	nodes := n.PreorderArray()
+	for _, node := range nodes {
+		node.MRK = false
+	}
 }

@@ -42,7 +42,7 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 			}
 			//end := time.Now()
 			//fmt.Println(end.Sub(start))
-			curll = CalcUnrootedLogLike(tree)
+			curll = CalcUnrootedLogLike(tree, true)
 			if curll > bestll {
 				bestll = curll
 				besttr = tree.Newick(true)
@@ -111,7 +111,7 @@ func PruneTip(newpar *Node, n *Node) {
 	n.LEN = n.LEN + newpar.LEN
 }
 
-//this is the inverse of above
+//GraftTip is the inverse of above
 func GraftTip(newpar *Node, n *Node) {
 	n.PAR.AddChild(newpar)
 	n.PAR.RemoveChild(n)
