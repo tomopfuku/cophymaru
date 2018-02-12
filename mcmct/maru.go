@@ -35,11 +35,10 @@ func main() {
 	fmt.Println("CONTAINING ", ntax, "TAXA")
 	cophymaru.MapContinuous(tree, traits, ntraits)
 
+	/* test random vs reference tree LL comparison
 	randTree := cophymaru.RandomUnrootedTree(tree)
 	cophymaru.IterateBMLengths(tree, *iterArg)
 	cophymaru.IterateBMLengths(randTree, *iterArg)
-
-	/* test random vs reference tree LL comparison
 	l1 := cophymaru.MissingUnrootedLogLike(randTree, true)
 	l2 := cophymaru.MissingUnrootedLogLike(tree, true)
 	fmt.Println(randTree.Newick(true))
