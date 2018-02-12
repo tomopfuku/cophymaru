@@ -82,7 +82,7 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
 			newpar.MIS = append(newpar.MIS, false)
 		}
-		reattach := randomNode(nodes[1:])
+		reattach := RandomNode(nodes[1:])
 		GraftFossilTip(newpar, reattach)
 		nodes = tree.PreorderArray() // need to reinitialize the node list to include the now-placed fossil
 	}
@@ -93,7 +93,8 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 	}
 }
 
-func randomNode(nodes []*Node) (rnode *Node) {
+//RandomNode will pull a random node from a slice of nodes
+func RandomNode(nodes []*Node) (rnode *Node) {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 	rnoden := r1.Intn(len(nodes))

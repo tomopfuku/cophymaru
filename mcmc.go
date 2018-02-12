@@ -170,7 +170,7 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, mi
 }
 
 func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, branchPrior string, missing bool) (float64, float64) {
-	updateNode := drawRandomNode(nodes)
+	updateNode := RandomNode(nodes)
 	soldL := updateNode.LEN
 	updateNode.UnmarkToRoot(tree)
 	var propRat float64
@@ -205,9 +205,10 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 	return lp, ll
 }
 
-//TODO: I think I can just delete this. It is deprecated and i think not called by anything. Need to check
 func drawRandomNode(n []*Node) (rnode *Node) {
-	rnoden := rand.Intn(len(n))
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	rnoden := r1.Intn(len(n))
 	rnode = n[rnoden]
 	return
 }
@@ -248,7 +249,7 @@ func PruneFossilTip(tip *Node) (x, p float64, lastn *Node) {
 	return
 }
 
-//GraftFossilTip reattaches a fossil tip to branch n at a random point
+//GraftFossilTip reattaches a fossil tip (newpar) to branch n at a random point
 func GraftFossilTip(newpar *Node, n *Node) float64 {
 	r := n.LEN
 	n.PAR.AddChild(newpar)

@@ -34,7 +34,21 @@ func main() {
 	traits, ntax, ntraits := cophymaru.ReadContinuous(*traitArg)
 	fmt.Println("CONTAINING ", ntax, "TAXA")
 	cophymaru.MapContinuous(tree, traits, ntraits)
-	//cophymaru.IterateBMLengths(tree,*iterArg)
+
+	randTree := cophymaru.RandomUnrootedTree(tree)
+	cophymaru.IterateBMLengths(tree, *iterArg)
+	cophymaru.IterateBMLengths(randTree, *iterArg)
+
+	/* test random vs reference tree LL comparison
+	l1 := cophymaru.MissingUnrootedLogLike(randTree, true)
+	l2 := cophymaru.MissingUnrootedLogLike(tree, true)
+	fmt.Println(randTree.Newick(true))
+	fmt.Println(l1, l2)
+	os.Exit(0)
+	fmt.Println(cophymaru.CalibrateSiteWeights(tree))
+	os.Exit(0)
+	*/
+
 	var fosSlice []string // read in fossil names from command line
 	for _, i := range strings.Split(*fosArg, ",") {
 		fosSlice = append(fosSlice, i)
