@@ -87,7 +87,7 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 	lw := bufio.NewWriter(lf)
 
 	nodes := tree.PreorderArray()[1:]
-	//fos := getFossilNodesFromLabel(fnames, nodes)
+	fos := getFossilNodesFromLabel(fnames, nodes)
 	var inNodes []*Node
 	for _, n := range nodes {
 		if len(n.CHLD) == 2 {
@@ -103,8 +103,8 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 	}
 	for i := 0; i < gen; i++ {
 		if i%2 == 0 || i == 0 {
-			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
-			//lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, missing, weights)
+			//lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
+			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, missing, weights)
 		} else {
 			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
 		}

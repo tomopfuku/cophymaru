@@ -50,7 +50,7 @@ func main() {
 	if *weightLLArg == true {
 		fmt.Println("Calibrating weights to filter for concordant sites...")
 		weights = cophymaru.CalibrateSiteWeights(tree)
-		//fmt.Println("Generating starting tree with weights:", weights)
+		fmt.Println("Generating starting tree with weights:", weights)
 	} else {
 		for i := 0; i < ntraits; i++ {
 			weights = append(weights, 1.0)

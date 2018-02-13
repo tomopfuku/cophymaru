@@ -20,6 +20,9 @@ func CalibrateSiteWeights(tree *Node) (weights []float64) {
 			}
 		}
 	}
+	for i := range weights {
+		weights[i] = weights[i] / 100.
+	}
 	return
 }
 
