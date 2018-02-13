@@ -8,7 +8,7 @@ import (
 //TODO: this has a bug somewhere. need to track it down at some point.
 
 //InsertFossilTaxa finds the ML placement of a set of fossils via stepwise addition
-func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, iter int, missing bool) (besttr string, bestll float64) {
+func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, iter int, missing bool, weights []float64) (besttr string, bestll float64) {
 	nodes := tree.PreorderArray()
 	//TODO: get this missing data stuff up and running
 	//trMeans := CalcSiteMeans(nodes)
@@ -37,12 +37,14 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 			//start := time.Now()
 			if missing == false {
 				IterateBMLengths(tree, iter)
+				curll = CalcUnrootedLogLike(tree, true)
 			} else if missing == true {
 				MissingTraitsEM(tree, iter)
+				curll = WeightedUnrootedLogLike(tree, true, weights)
 			}
 			//end := time.Now()
 			//fmt.Println(end.Sub(start))
-			curll = CalcUnrootedLogLike(tree, true)
+
 			if curll > bestll {
 				bestll = curll
 				besttr = tree.Newick(true)

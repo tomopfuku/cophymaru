@@ -150,7 +150,7 @@ func PruneToStar(tree *Node) {
 */
 //fmt.Println("LL",L)
 
-//CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This _can_ be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
+//CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that no sites have missing data.
 func CalcUnrootedLogLike(tree *Node, startFresh bool) (chll float64) {
 	chll = 0.0
 	for _, ch := range tree.CHLD {
@@ -215,34 +215,68 @@ func CalcRootedLogLike(n *Node, nlikes *float64, startFresh bool) {
 	}
 }
 
-//MissingUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This can be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
-func MissingUnrootedLogLike(tree *Node, startFresh bool) (sitelikes float64) {
-	sitelikes = 0.0
+//SitewiseLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This can be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
+func SitewiseLogLike(tree *Node) (sitelikes []float64) {
 	var tmpll float64
-	var nodes []*Node
+	ch1 := tree.CHLD[0]                     //.PostorderArray()
+	ch2 := tree.CHLD[1]                     //.PostorderArray()
+	ch3 := tree.CHLD[2]                     //.PostorderArray()
 	for site := range tree.CHLD[0].CONTRT { //calculate log likelihood at each site
 		tmpll = 0.
-		for _, ch := range tree.CHLD { // calc LL for each subtree and prune to trifurcating root
-			nodes = ch.PostorderArray()
-			tmpll += calcRootedSiteLL(nodes, startFresh, site)
-		}
+		calcRootedSiteLL(ch1, &tmpll, true, site)
+		calcRootedSiteLL(ch2, &tmpll, true, site)
+		calcRootedSiteLL(ch3, &tmpll, true, site)
 		tmpll += calcUnrootedSiteLL(tree, site)
-		sitelikes += tmpll
+		//fmt.Println(site, tmpll)
+		sitelikes = append(sitelikes, tmpll)
 	}
 	return
 }
 
-//WeightedUnrootedLogLike will calculate the likelhood of an unrooted tree given a vector of site weights
+/*/WeightedUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that no sites have missing data.
+func WeightedUnrootedLogLike(tree *Node, startFresh bool, weights []float64) (chll float64) {
+	chll = 0.0
+	for _, ch := range tree.CHLD {
+		n := ch.PostorderArray()
+		for i := range ch.CONTRT {
+			curlike := calcRootedSiteLL(n, startFresh, i)
+			chll += curlike
+		}
+	}
+	sitelikes := 0.0
+	var tmpll float64
+	var contrast, curVar float64
+	for i := range tree.CHLD[0].CONTRT {
+		tmpll = 0.
+		if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false { //do the standard calculation when no subtrees have missing traits
+			contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
+			curVar = tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN
+			tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+			tmpPRNLEN := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].PRNLEN) / (tree.CHLD[0].PRNLEN + tree.CHLD[1].PRNLEN))
+			tmpChar := ((tree.CHLD[0].PRNLEN * tree.CHLD[1].CONTRT[i]) + (tree.CHLD[1].PRNLEN * tree.CHLD[0].CONTRT[i])) / curVar
+			contrast = tmpChar - tree.CHLD[2].CONTRT[i]
+			curVar = tree.CHLD[2].PRNLEN + tmpPRNLEN
+			tmpll += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		}
+		sitelikes += tmpll * weights[i]
+	}
+	chll += sitelikes
+	return
+}
+*/
+
+//WeightedUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This can be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
 func WeightedUnrootedLogLike(tree *Node, startFresh bool, weights []float64) (sitelikes float64) {
 	sitelikes = 0.0
 	var tmpll float64
-	var nodes []*Node
+	ch1 := tree.CHLD[0]                     //.PostorderArray()
+	ch2 := tree.CHLD[1]                     //.PostorderArray()
+	ch3 := tree.CHLD[2]                     //.PostorderArray()
 	for site := range tree.CHLD[0].CONTRT { //calculate log likelihood at each site
 		tmpll = 0.
-		for _, ch := range tree.CHLD { // calc LL for each subtree and prune to trifurcating root
-			nodes = ch.PostorderArray()
-			tmpll += calcRootedSiteLL(nodes, startFresh, site)
-		}
+		calcRootedSiteLL(ch1, &tmpll, startFresh, site)
+		calcRootedSiteLL(ch2, &tmpll, startFresh, site)
+		calcRootedSiteLL(ch3, &tmpll, startFresh, site)
 		tmpll += calcUnrootedSiteLL(tree, site)
 		tmpll = tmpll * weights[site]
 		sitelikes += tmpll
@@ -250,18 +284,20 @@ func WeightedUnrootedLogLike(tree *Node, startFresh bool, weights []float64) (si
 	return
 }
 
-//SitewiseLogLike will calculate the loglikelihood at each site of a continuous alignment and return the values as a slice
-func SitewiseLogLike(tree *Node) (sitelikes []float64) {
+//MissingUnrootedLogLike will calculate the log-likelihood of an unrooted tree. It is deprecated and is only a convienience for testing LL calculation.
+func MissingUnrootedLogLike(tree *Node, startFresh bool) (sitelikes float64) {
+	sitelikes = 0.0
 	var tmpll float64
-	var nodes []*Node
+	ch1 := tree.CHLD[0]                     //.PostorderArray()
+	ch2 := tree.CHLD[1]                     //.PostorderArray()
+	ch3 := tree.CHLD[2]                     //.PostorderArray()
 	for site := range tree.CHLD[0].CONTRT { //calculate log likelihood at each site
 		tmpll = 0.
-		for _, ch := range tree.CHLD { // calc LL for each subtree and prune to trifurcating root
-			nodes = ch.PostorderArray()
-			tmpll += calcRootedSiteLL(nodes, false, site)
-		}
+		calcRootedSiteLL(ch1, &tmpll, startFresh, site)
+		calcRootedSiteLL(ch2, &tmpll, startFresh, site)
+		calcRootedSiteLL(ch3, &tmpll, startFresh, site)
 		tmpll += calcUnrootedSiteLL(tree, site)
-		sitelikes = append(sitelikes, tmpll)
+		sitelikes += tmpll
 	}
 	return
 }
@@ -296,21 +332,22 @@ func calcUnrootedSiteLL(tree *Node, i int) (tmpll float64) {
 
 //MissingRootedLogLike will return the BM log-likelihood of a tree for a single site, pruning tips that have missing data
 func MissingRootedLogLike(n *Node, startFresh bool) (sitelikes float64) {
-	nodes := n.PostorderArray()
+	//nodes := n.PostorderArray()
 	sitelikes = 0.
-	for site := range nodes[0].CONTRT {
-		sitelikes += calcRootedSiteLL(nodes, startFresh, site)
+	for site := range n.CONTRT {
+		calcRootedSiteLL(n, &sitelikes, startFresh, site)
 	}
 	return
 }
 
-//calcNodeLikes will calculate the likelihood of a phylogeny at a single site
+/*/calcNodeLikes will calculate the likelihood of a phylogeny at a single site
 func calcRootedSiteLL(nodes []*Node, startFresh bool, site int) float64 {
 	nodelikes := 0.
 	var contrast, curVar float64
 	var ll float64
 	for _, node := range nodes {
 		if node.MRK == true && startFresh == false {
+			fmt.Println("LOGIC ISSUE. CHECK LINE ~350 OF bm_prune.go (calcRootedSiteLL())")
 			node.PRNLEN = node.LEN
 			//if len(node.CHLD) != 0 {
 			//	if site == 0 { //add the pre calculated node log likes during the first pass through the tree
@@ -341,6 +378,41 @@ func calcRootedSiteLL(nodes []*Node, startFresh bool, site int) float64 {
 		}
 	}
 	return nodelikes
+}
+*/
+//calcRootedSiteLL will return the BM likelihood of a tree assuming that no data are missing from the tips.
+func calcRootedSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
+	for _, chld := range n.CHLD {
+		calcRootedSiteLL(chld, nlikes, startFresh, site)
+	}
+	nchld := len(n.CHLD)
+	if n.MRK == true && startFresh == false {
+		if nchld != 0 {
+			*nlikes += n.LL
+		}
+	} else if n.MRK == false || startFresh == true {
+		n.PRNLEN = n.LEN
+		if nchld != 0 {
+			if nchld != 2 {
+				fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
+				os.Exit(0)
+			}
+			c0 := n.CHLD[0]
+			c1 := n.CHLD[1]
+			curlike := float64(0.0)
+			var tempChar float64
+			curVar := c0.PRNLEN + c1.PRNLEN
+			contrast := c0.CONTRT[site] - c1.CONTRT[site]
+			curlike += ((-0.5) * ((math.Log(2 * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
+			tempChar = ((c0.PRNLEN * c1.CONTRT[site]) + (c1.PRNLEN * c0.CONTRT[site])) / (curVar)
+			n.CONTRT[site] = tempChar
+			*nlikes += curlike
+			tempBranchLength := n.LEN + ((c0.PRNLEN * c1.PRNLEN) / (c0.PRNLEN + c1.PRNLEN)) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
+			n.PRNLEN = tempBranchLength                                                     // need to calculate the "prune length" by adding the length to the uncertainty
+			n.LL = curlike
+			n.MRK = true
+		}
+	}
 }
 
 //TritomyML will calculate the MLEs for the branch lengths of a tifurcating 3-taxon tree
