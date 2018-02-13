@@ -5,7 +5,7 @@ import (
 )
 
 //CalibrateSiteWeights will calculate weight vector to increase emphasis on sites concordant with the molecular reference tree during fossil placement procedures
-func CalibrateSiteWeights(tree *Node) (weights []float64) {
+func CalibrateSiteWeights(tree *Node, weightType string) (weights []float64) {
 	siteLL := SitewiseLogLike(tree)
 	for range siteLL {
 		weights = append(weights, 0.)
@@ -20,8 +20,10 @@ func CalibrateSiteWeights(tree *Node) (weights []float64) {
 			}
 		}
 	}
-	for i := range weights {
-		weights[i] = weights[i] / 100.
+	if weightType == "float" {
+		for i := range weights {
+			weights[i] = weights[i] / 100.
+		}
 	}
 	return
 }
