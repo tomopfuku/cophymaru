@@ -1,10 +1,5 @@
 package cophymaru
 
-import (
-	"math/rand"
-	"time"
-)
-
 //TODO: this has a bug somewhere. need to track it down at some point.
 
 //InsertFossilTaxa finds the ML placement of a set of fossils via stepwise addition
@@ -93,15 +88,6 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 	} else if missing == true {
 		MissingTraitsEM(tree, iter)
 	}
-}
-
-//RandomNode will pull a random node from a slice of nodes
-func RandomNode(nodes []*Node) (rnode *Node) {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	rnoden := r1.Intn(len(nodes))
-	rnode = nodes[rnoden] //choose a random node
-	return
 }
 
 //PruneTip will prune a fossil (or any) tip from a tree

@@ -27,6 +27,7 @@ func main() {
 	printFreqArg := flag.Int("pr", 100, "Frequency with which to print to the screen")
 	sampFreqArg := flag.Int("samp", 100, "Frequency with which to sample from the chain")
 	weightLLArg := flag.String("w", "flat", "indicate whether to place fossils using the weighted LL algorithm\nOptions:\nflat (default): flat weights\nfloat: weight site log-likelihoods using a multiplier between 0 and 1\nint: weight site log-likelihoods using a multiplier between 0 and 100\n\n")
+	runNameArg := flag.String("o", "cophymaru", "specify the prefix for outfile names")
 	flag.Parse()
 	//var ntax,ntraits int
 	nwk := cophymaru.ReadLine(*treeArg)[0]
@@ -63,16 +64,21 @@ func main() {
 	if *startArg == "0" {
 		starttr, startll := cophymaru.InsertFossilTaxa(tree, traits, fosSlice, *iterArg, *missingArg, weights)
 		fmt.Println("STARTING ML TREE:\n", starttr, "\n\nSTARTING MCMC WITH LOG-LIKELIHOOD ", startll)
+		//fmt.Println(STARTING MCMC WITH LOG-LIKELIHOOD ", startll)
 	} else if *startArg == "1" {
 		cophymaru.MakeRandomStartingBranchLengths(tree)
 		cophymaru.InsertFossilTaxaRandom(tree, traits, fosSlice, *iterArg, *missingArg)
-		fmt.Println("START: ", tree.Newick(true))
+		fmt.Println("\n\nINITIATING MCMC WITH RANDOM STARTING TREE") //", tree.Newick(true))
 	}
 	//l1 := cophymaru.CalcUnrootedLogLike(tree, true)
 	//l2 := cophymaru.WeightedUnrootedLogLike(tree, true, weights)
 	//fmt.Println("START COMPARISON:", l1, l2)
+	treeOutFile := *runNameArg
+	treeOutFile += ".t"
+	logOutFile := *runNameArg
+	logOutFile += ".mcmc"
 	start := time.Now()
-	cophymaru.MCMC(tree, *genArg, fosSlice, "tmp/test.t", "tmp/test.mcmc", *brPrior, *missingArg, *printFreqArg, *sampFreqArg, weights)
+	cophymaru.MCMC(tree, *genArg, fosSlice, treeOutFile, logOutFile, *brPrior, *missingArg, *printFreqArg, *sampFreqArg, weights)
 	elapsed := time.Since(start)
 	fmt.Println("COMPLETED ", *genArg, "MCMC SIMULATIONS IN ", elapsed)
 }

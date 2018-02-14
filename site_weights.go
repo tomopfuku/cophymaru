@@ -24,6 +24,14 @@ func CalibrateSiteWeights(tree *Node, weightType string) (weights []float64) {
 		for i := range weights {
 			weights[i] = weights[i] / 100.
 		}
+	} else if weightType == "bin" {
+		for i := range weights {
+			if weights[i] < 95 {
+				weights[i] = 0.
+			} else {
+				weights[i] = 1.
+			}
+		}
 	}
 	return
 }

@@ -24,10 +24,24 @@ func brlenSlidingWindow(theta float64, wsize float64) (thetaStar float64) {
 	return
 }
 
-func singleBrlenMultiplierProp(theta float64) (thetaStar, propRat float64) {
+func cladeBrlenMultiplierProp(theta []float64, epsilon float64) (thetaStar []float64, propRat float64) {
+	u := rand.Float64()
+	//epsilon := 0.2
+	c := math.Exp(((u - 0.5) * epsilon))
+	m := float64(len(theta))
+	propRat = math.Pow(c, m)
+	var tmpstar float64
+	for i := range theta {
+		tmpstar = theta[i] * c
+		thetaStar = append(thetaStar, tmpstar)
+	}
+	return
+}
+
+func singleBrlenMultiplierProp(theta float64, epsilon float64) (thetaStar, propRat float64) {
 	min := math.Log(0.001)
 	u := rand.Float64()
-	epsilon := 0.5
+	//epsilon := 0.2
 	c := math.Exp(((u - 0.5) * epsilon))
 	thetaStar = theta * c
 	propRat = c
@@ -80,11 +94,11 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 		log.Fatal(err)
 	}
 	w := bufio.NewWriter(f)
-	lf, err := os.Create(logOutFile)
+	logFile, err := os.Create(logOutFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	lw := bufio.NewWriter(lf)
+	logWriter := bufio.NewWriter(logFile)
 
 	nodes := tree.PreorderArray()[1:]
 	fos := getFossilNodesFromLabel(fnames, nodes)
@@ -101,19 +115,49 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 	} else if branchPrior == "1" {
 		lp = ExponentialBranchLengthLogPrior(nodes, 10.)
 	}
+	acceptanceCount := 0.0
+	topAcceptanceCount := 0.
+	var topAcceptanceRatio float64
+	var acceptanceRatio float64
+	var oldLL float64
+	epsilon := 0.1
 	for i := 0; i < gen; i++ {
-		if i%2 == 0 || i == 0 {
+		oldLL = ll
+		if i%3 == 0 || i == 0 {
 			//lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
-			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, missing, weights)
+			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, branchPrior, missing, weights)
+			if ll != oldLL {
+				topAcceptanceCount = topAcceptanceCount + 1.0
+			}
 		} else {
-			lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
+			s1 := rand.NewSource(time.Now().UnixNano())
+			r1 := rand.New(s1)
+			r := r1.Float64()
+			if r > 0.1 { // apply single branch length update 95% of the time
+				lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights, epsilon) //NOTE uncomment to sample BRLENS
+			} else {
+				lp, ll = cladeBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights, epsilon)
+			}
+			if ll != oldLL {
+				acceptanceCount = acceptanceCount + 1.0
+			}
+		}
+		if i%500 == 0 && i <= 10000 && i != 0 { // use burn in period to adjust the branch length multiplier step length every 200 generations
+			acceptanceRatio = acceptanceCount / float64(i)
+			epsilon = adjustBranchLengthStepLength(epsilon, acceptanceRatio)
+		}
+		if i == 0 {
+			fmt.Println("generation", "logPrior", "logLikelihood", "acceptanceRatio", "topologyAcceptanceRatio")
+			fmt.Println("0", lp, ll, "NA", "NA")
+		}
+		if i%prFreq == 0 && i != 0 {
+			acceptanceRatio = acceptanceCount / float64(i)
+			topAcceptanceRatio = topAcceptanceCount / float64(i)
+			fmt.Println(i, lp, ll, acceptanceRatio, topAcceptanceRatio)
 		}
 
-		if i%prFreq == 0 {
-			fmt.Println(i)
-		}
 		if i%sampFreq == 0 {
-			fmt.Fprint(lw, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\n")
+			fmt.Fprint(logWriter, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\n")
 			/*
 				for _, ln := range nodes {
 					fmt.Fprint(lw, strconv.FormatFloat(ln.LEN, 'f', -1, 64)+"\t")
@@ -124,7 +168,7 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 			fmt.Fprint(w, tree.Newick(true)+";\n")
 		}
 	}
-	lw.Flush()
+	logWriter.Flush()
 	err = w.Flush()
 	if err != nil {
 		log.Fatal(err)
@@ -132,9 +176,16 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 	f.Close()
 }
 
+func adjustBranchLengthStepLength(epsilon, acceptanceRatio float64) (epsilonStar float64) { //this will calculate the optimal step length for the single branch length multiplier proposal
+	acceptanceRatioStar := 0.44 // this is the optimal acceptance probability for uniform proposals
+	s := math.Pi / 2.
+	epsilonStar = epsilon * (math.Tan(s*acceptanceRatio) / math.Tan(s*acceptanceRatioStar))
+	return
+}
+
 //this move prunes and regrafts a fossil, creating random variables for the altered branch lengths
 //the procedure is basically the same as the SPR move as described in the Yang (2014) Mol. Evol. book
-func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, missing bool, weights []float64) (float64, float64) {
+func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, branchPrior string, missing bool, weights []float64) (float64, float64) {
 	fn := drawRandomNode(fnodes) //draw a random fossil tip
 	reattach := drawRandomReattachment(fn, nodes)
 	x, p, lastn := PruneFossilTip(fn)
@@ -143,7 +194,12 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, mi
 	llstar := WeightedUnrootedLogLike(tree, true, weights)
 	//llstar1 := CalcUnrootedLogLike(tree, true)
 	//fmt.Println(llstar, llstar1)
-	lpstar := math.Log(1.)
+	var lpstar float64
+	if branchPrior == "0" {
+		lpstar = math.Log(1.)
+	} else if branchPrior == "1" {
+		lpstar = ExponentialBranchLengthLogPrior(nodes, 1.0)
+	}
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
@@ -163,12 +219,12 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, mi
 	return lp, ll
 }
 
-func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, branchPrior string, missing bool, weights []float64) (float64, float64) {
+func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, branchPrior string, missing bool, weights []float64, epsilon float64) (float64, float64) {
 	updateNode := RandomNode(nodes)
 	soldL := updateNode.LEN
 	//updateNode.UnmarkToRoot(tree)
 	var propRat float64
-	updateNode.LEN, propRat = singleBrlenMultiplierProp(updateNode.LEN)
+	updateNode.LEN, propRat = singleBrlenMultiplierProp(updateNode.LEN, epsilon)
 	llstar := WeightedUnrootedLogLike(tree, true, weights)
 	//llstar1 := CalcUnrootedLogLike(tree, true)
 	//fmt.Println(llstar, llstar1)
@@ -177,7 +233,7 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 	if branchPrior == "0" {
 		lpstar = math.Log(1.)
 	} else if branchPrior == "1" {
-		lpstar = ExponentialBranchLengthLogPrior(nodes, 10.)
+		lpstar = ExponentialBranchLengthLogPrior(nodes, 1.0)
 	}
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
 	//fmt.Println(llstar, ll, llstar-ll)
@@ -194,11 +250,67 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 	return lp, ll
 }
 
+func cladeBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, branchPrior string, missing bool, weights []float64, epsilon float64) (float64, float64) {
+	updateNode := RandomInternalNode(nodes)
+	updateClade := updateNode.PostorderArray()
+	var oldlens []float64
+	for _, node := range updateClade {
+		oldlens = append(oldlens, node.LEN)
+	}
+	newlens, propRat := cladeBrlenMultiplierProp(oldlens, epsilon)
+	for i, node := range updateClade {
+		node.LEN = newlens[i]
+	}
+	llstar := WeightedUnrootedLogLike(tree, true, weights)
+	var lpstar float64
+	if branchPrior == "0" {
+		lpstar = math.Log(1.)
+	} else if branchPrior == "1" {
+		lpstar = ExponentialBranchLengthLogPrior(nodes, 1.0)
+	}
+	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
+	//fmt.Println(llstar, ll, llstar-ll)
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	r := r1.Float64()
+	if r < alpha {
+		ll = llstar
+		lp = lpstar
+	} else {
+		//updateNode.UnmarkToRoot(tree)
+		for i, node := range updateClade {
+			node.LEN = oldlens[i]
+		}
+	}
+	return lp, ll
+}
+
 func drawRandomNode(n []*Node) (rnode *Node) {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 	rnoden := r1.Intn(len(n))
 	rnode = n[rnoden]
+	return
+}
+
+//RandomNode will pull a random node from a slice of nodes
+func RandomNode(nodes []*Node) (rnode *Node) {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	rnoden := r1.Intn(len(nodes))
+	rnode = nodes[rnoden] //choose a random node
+	return
+}
+
+//RandomInternalNode will draw a random internal node
+func RandomInternalNode(nodes []*Node) (rnode *Node) {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	rnoden := r1.Intn(len(nodes))
+	rnode = nodes[rnoden] //choose a random reattachment point
+	if len(rnode.CHLD) == 0 {
+		rnode = RandomInternalNode(nodes)
+	}
 	return
 }
 
