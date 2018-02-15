@@ -21,6 +21,7 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
 			newpar.MIS = append(newpar.MIS, false)
+			newpar.LL = append(newpar.LL, 0.)
 		}
 		bestll = -1000000000000.0
 		besttr = ""
@@ -78,6 +79,7 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
 			newpar.MIS = append(newpar.MIS, false)
+			newpar.LL = append(newpar.LL, 0.)
 		}
 		reattach := RandomNode(nodes[1:])
 		GraftFossilTip(newpar, reattach)

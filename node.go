@@ -18,7 +18,7 @@ type Node struct {
 	//VISITED bool
 	MRK bool
 	MIS []bool //this is a slice of bools that indicates whether the index is missing from CONTRT
-	LL  float64
+	LL  []float64
 }
 
 //PostorderArray will return an array of all the nodes in the tree in Postorder
@@ -146,12 +146,12 @@ func (n *Node) UnmarkToRoot(oldroot *Node) {
 	curnode := n
 	pathlen := int(0)
 	for {
-		if curnode == oldroot {
-			break
-		}
 		pathlen++
 		curnode = curnode.PAR
 		curnode.MRK = false
+		if curnode == oldroot {
+			break
+		}
 		if pathlen > 2000000 {
 			fmt.Println("something is wrong with the tree. could not walk back to root.")
 			os.Exit(0)

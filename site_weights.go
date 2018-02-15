@@ -64,6 +64,7 @@ func RandomUnrootedTree(tree *Node) (root *Node) {
 		for range newtip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
 			newpar.MIS = append(newpar.MIS, false)
+			newpar.LL = append(newpar.LL, 0.)
 		}
 		randNodes = append(randNodes, newpar)
 	}
@@ -71,6 +72,7 @@ func RandomUnrootedTree(tree *Node) (root *Node) {
 	for range randNodes[0].CONTRT {
 		root.CONTRT = append(root.CONTRT, float64(0.0))
 		root.MIS = append(root.MIS, false)
+		root.LL = append(root.LL, 0.)
 	}
 
 	for i := 0; i < 3; i++ {

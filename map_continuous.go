@@ -80,6 +80,7 @@ func MapContinuous(t *Node, traits map[string][]float64, ntraits int) {
 	z = 0.000000000
 	if len(t.CHLD) == 0 {
 		t.CONTRT = traits[t.NAME]
+		t.LL = append(t.LL, z)
 		MakeMissingDataSlice(t)
 	} else {
 		count := 0
@@ -89,6 +90,7 @@ func MapContinuous(t *Node, traits map[string][]float64, ntraits int) {
 			}
 			t.CONTRT = append(t.CONTRT, z)
 			t.MIS = append(t.MIS, false)
+			t.LL = append(t.LL, z)
 			count++
 		}
 	}

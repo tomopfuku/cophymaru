@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"sync"
 )
 
 func postorder(curnode *Node) {
@@ -128,28 +129,6 @@ func PruneToStar(tree *Node) {
 	}
 }
 
-/*
-   some potentially sketchy math:
-   var bot float64
-   twopi := math.Pow((2.*math.Pi),float64(len(tree.CHLD[0].CONTRT)))
-   fmt.Println("pi",twopi)
-   bot = math.Pow(twopi,float64(len(tree.CHLD[0].CONTRT)))*math.Pow(((tree.CHLD[0].LEN*tree.CHLD[1].LEN)+(tree.CHLD[0].LEN*tree.CHLD[2].LEN)+(tree.CHLD[1].LEN*tree.CHLD[2].LEN)),float64(len(tree.CHLD[0].CONTRT))/2.0)
-   bot = 1./bot
-   D23 := float64(0.0)
-   D13 := float64(0.0)
-   D12 := float64(0.0)
-   for i,_:= range tree.CHLD[0].CONTRT{
-       D23 += math.Pow((tree.CHLD[1].CONTRT[i]-tree.CHLD[2].CONTRT[i]),2)
-       D13 += math.Pow((tree.CHLD[0].CONTRT[i]-tree.CHLD[2].CONTRT[i]),2)
-       D12 += math.Pow((tree.CHLD[1].CONTRT[i]-tree.CHLD[0].CONTRT[i]),2)
-   }
-   tright := (tree.CHLD[0].LEN*D23)+(tree.CHLD[1].LEN*D13)+(tree.CHLD[2].LEN*D12)
-   bright := ((tree.CHLD[0].LEN*tree.CHLD[1].LEN)+(tree.CHLD[0].LEN*tree.CHLD[2].LEN)+(tree.CHLD[1].LEN*tree.CHLD[2].LEN))*2
-   right := -(tright/bright)
-   L := math.Log(bot)+right
-*/
-//fmt.Println("LL",L)
-
 //CalcUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that no sites have missing data.
 func CalcUnrootedLogLike(tree *Node, startFresh bool) (chll float64) {
 	chll = 0.0
@@ -187,7 +166,9 @@ func CalcRootedLogLike(n *Node, nlikes *float64, startFresh bool) {
 	nchld := len(n.CHLD)
 	if n.MRK == true && startFresh == false {
 		if nchld != 0 {
-			*nlikes += n.LL
+			for _, l := range n.LL {
+				*nlikes += l
+			}
 		}
 	} else if n.MRK == false || startFresh == true {
 		n.PRNLEN = n.LEN
@@ -203,13 +184,14 @@ func CalcRootedLogLike(n *Node, nlikes *float64, startFresh bool) {
 				curVar := c0.PRNLEN + c1.PRNLEN
 				contrast := c0.CONTRT[i] - c1.CONTRT[i]
 				curlike += ((-0.5) * ((math.Log(2 * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
+				n.LL[i] = curlike
 				tempChar = ((c0.PRNLEN * c1.CONTRT[i]) + (c1.PRNLEN * c0.CONTRT[i])) / (curVar)
 				n.CONTRT[i] = tempChar
 			}
 			*nlikes += curlike
 			tempBranchLength := n.LEN + ((c0.PRNLEN * c1.PRNLEN) / (c0.PRNLEN + c1.PRNLEN)) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
 			n.PRNLEN = tempBranchLength                                                     // need to calculate the "prune length" by adding the length to the uncertainty
-			n.LL = curlike
+
 			n.MRK = true
 		}
 	}
@@ -265,6 +247,48 @@ func WeightedUnrootedLogLike(tree *Node, startFresh bool, weights []float64) (ch
 }
 */
 
+//MarkAll will mark all of the nodes in a tree ARRAY
+func MarkAll(nodes []*Node) {
+	for _, n := range nodes {
+		n.MRK = true
+	}
+}
+
+//NOTE: this does not work correctly.
+//WeightedUnrootedLogLikeParallel will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This can be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
+func WeightedUnrootedLogLikeParallel(tree *Node, startFresh bool, weights []float64) (sitelikes float64) {
+	var wg sync.WaitGroup
+	ch1 := tree.CHLD[0] //.PostorderArray()
+	ch2 := tree.CHLD[1] //.PostorderArray()
+	ch3 := tree.CHLD[2] //.PostorderArray()
+	nsites := len(tree.CHLD[0].CONTRT)
+	ch := make(chan float64)
+	for site := 0; site < nsites; site++ { //calculate log likelihood at each site
+		wg.Add(1)
+		go func(ch1, ch2, ch3 *Node, startFresh bool, site int) {
+			defer wg.Done()
+			tmpll := 0.
+			calcRootedSiteLL(ch1, &tmpll, startFresh, site)
+			calcRootedSiteLL(ch2, &tmpll, startFresh, site)
+			calcRootedSiteLL(ch3, &tmpll, startFresh, site)
+			tmpll += calcUnrootedSiteLL(tree, site)
+			tmpll = tmpll * weights[site]
+			ch <- tmpll
+		}(ch1, ch2, ch3, startFresh, site)
+	}
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+	sitelikes = 0.0
+	//for site := 0; site < nsites; site++ {
+	for like := range ch {
+		//tmpll := <-ch
+		sitelikes += like
+	}
+	return
+}
+
 //WeightedUnrootedLogLike will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This can be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
 func WeightedUnrootedLogLike(tree *Node, startFresh bool, weights []float64) (sitelikes float64) {
 	sitelikes = 0.0
@@ -279,6 +303,7 @@ func WeightedUnrootedLogLike(tree *Node, startFresh bool, weights []float64) (si
 		calcRootedSiteLL(ch3, &tmpll, startFresh, site)
 		tmpll += calcUnrootedSiteLL(tree, site)
 		tmpll = tmpll * weights[site]
+		//fmt.Println(tmpll)
 		sitelikes += tmpll
 	}
 	return
@@ -386,11 +411,14 @@ func calcRootedSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 		calcRootedSiteLL(chld, nlikes, startFresh, site)
 	}
 	nchld := len(n.CHLD)
-	if n.MRK == true && startFresh == false {
-		if nchld != 0 {
-			*nlikes += n.LL
+	if n.MRK == true {
+		if startFresh == false {
+			if nchld != 0 {
+				*nlikes += n.LL[site]
+			}
 		}
-	} else if n.MRK == false || startFresh == true {
+	}
+	if n.MRK == false || startFresh == true {
 		n.PRNLEN = n.LEN
 		if nchld != 0 {
 			if nchld != 2 {
@@ -409,8 +437,8 @@ func calcRootedSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 			*nlikes += curlike
 			tempBranchLength := n.LEN + ((c0.PRNLEN * c1.PRNLEN) / (c0.PRNLEN + c1.PRNLEN)) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
 			n.PRNLEN = tempBranchLength                                                     // need to calculate the "prune length" by adding the length to the uncertainty
-			n.LL = curlike
-			n.MRK = true
+			n.LL[site] = curlike
+			//n.MRK = true
 		}
 	}
 }

@@ -109,7 +109,15 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 		}
 	}
 	var lp, ll float64
+	//start := time.Now()
 	ll = WeightedUnrootedLogLike(tree, true, weights)
+	//elapsed1 := time.Since(start)
+	//runtime.GOMAXPROCS(2)
+	//start = time.Now()
+	//llp := WeightedUnrootedLogLikeParallel(tree, true, weights)
+	//elapsed := time.Since(start)
+	//fmt.Println(ll, elapsed1, llp, elapsed)
+	//os.Exit(0)
 	if branchPrior == "0" {
 		lp = math.Log(1.) //ExponentialBranchLengthLogPrior(nodes,10.)
 	} else if branchPrior == "1" {
@@ -142,7 +150,8 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 				acceptanceCount = acceptanceCount + 1.0
 			}
 		}
-		if i%500 == 0 && i <= 10000 && i != 0 { // use burn in period to adjust the branch length multiplier step length every 200 generations
+
+		if i%200 == 0 && i <= 10000 && i != 0 { // use burn in period to adjust the branch length multiplier step length every 200 generations
 			acceptanceRatio = acceptanceCount / float64(i)
 			epsilon = adjustBranchLengthStepLength(epsilon, acceptanceRatio)
 		}
@@ -191,8 +200,13 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, br
 	x, p, lastn := PruneFossilTip(fn)
 	r := GraftFossilTip(fn.PAR, reattach)
 	propRat := r / (x * p)
+	//tree.UnmarkAll()
+	//lastn.UnmarkToRoot(tree)
+	//fn.UnmarkToRoot(tree)
+	//reattach.UnmarkToRoot(tree)
 	llstar := WeightedUnrootedLogLike(tree, true, weights)
-	//llstar1 := CalcUnrootedLogLike(tree, true)
+	//llstar1 := WeightedUnrootedLogLike(tree, true, weights)
+	//MarkAll(nodes)
 	//fmt.Println(llstar, llstar1)
 	var lpstar float64
 	if branchPrior == "0" {
@@ -225,8 +239,10 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 	//updateNode.UnmarkToRoot(tree)
 	var propRat float64
 	updateNode.LEN, propRat = singleBrlenMultiplierProp(updateNode.LEN, epsilon)
+	//updateNode.UnmarkToRoot(tree)
 	llstar := WeightedUnrootedLogLike(tree, true, weights)
-	//llstar1 := CalcUnrootedLogLike(tree, true)
+	//llstar1 := trueWeightedUnrootedLogLike(tree, true, weights)
+	//MarkAll(nodes)
 	//fmt.Println(llstar, llstar1)
 
 	var lpstar float64
@@ -244,7 +260,7 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 		ll = llstar
 		lp = lpstar
 	} else {
-		updateNode.UnmarkToRoot(tree)
+		//updateNode.UnmarkToRoot(tree)
 		updateNode.LEN = soldL
 	}
 	return lp, ll
@@ -260,7 +276,9 @@ func cladeBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node,
 	newlens, propRat := cladeBrlenMultiplierProp(oldlens, epsilon)
 	for i, node := range updateClade {
 		node.LEN = newlens[i]
+		node.MRK = false
 	}
+	//updateNode.UnmarkToRoot(tree)
 	llstar := WeightedUnrootedLogLike(tree, true, weights)
 	var lpstar float64
 	if branchPrior == "0" {
