@@ -9,6 +9,40 @@ func normalPDF(p float64, mean float64, sd float64) float64 {
 	return prob
 }
 
+func gammaPDF(p, alpha, beta float64) float64 {
+	prob := (math.Pow(alpha, beta) / math.Gamma(alpha)) * math.Exp(-beta*p) * math.Pow(p, (alpha-1))
+	return prob
+}
+
+//GammaTreeLengthPrior will calculate the prior probability of the current tree length
+func GammaTreeLengthPrior(nodels []*Node, alpha, beta float64) float64 {
+	tl := TreeLength(nodels)
+	return gammaPDF(tl, alpha, beta)
+}
+
+//DirchletBranchLengthLogPrior will return the log prior probability of all branch lengths in a trejke
+func DirchletBranchLengthLogPrior(nodels []*Node, alpha, beta float64) float64 {
+	T := TreeLength(nodels)
+	ntips := 0
+	for _, n := range nodels {
+		if len(n.CHLD) == 0 {
+			ntips++
+		}
+	}
+	x := (2. * float64(ntips)) - 4.
+	prob := (math.Pow(beta, alpha) / math.Gamma(alpha)) * math.Exp(-beta*T) * math.Pow(T, (alpha-1.-x))
+	prob = prob * factorial(ntips)
+	return math.Log(prob)
+}
+
+func factorial(val int) float64 {
+	fact := float64(val)
+	for i := val; i > 0; i-- {
+		fact = fact * float64(i)
+	}
+	return float64(fact)
+}
+
 //this calculates the probability of drawing parameter p from an exponential distribution with shape parameter == lambda
 func exponentialPDF(p float64, beta float64) float64 {
 	prob := (1.0 / beta) * math.Exp(-(p / beta))

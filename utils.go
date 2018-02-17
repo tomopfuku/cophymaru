@@ -9,6 +9,15 @@ import (
 	"time"
 )
 
+//TreeLength will return the total length of a slice of nodes
+func TreeLength(nodes []*Node) float64 {
+	len := 0.
+	for _, n := range nodes[1:] {
+		len += n.LEN
+	}
+	return len
+}
+
 //MakeRandomStartingBranchLengths will initialize a tree with a set of random branch lengths
 func MakeRandomStartingBranchLengths(tree *Node) {
 	nodes := tree.PreorderArray()

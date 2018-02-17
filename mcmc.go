@@ -122,7 +122,12 @@ func MCMC(tree *Node, gen int, fnames []string, treeOutFile, logOutFile string, 
 		lp = math.Log(1.) //ExponentialBranchLengthLogPrior(nodes,10.)
 	} else if branchPrior == "1" {
 		lp = ExponentialBranchLengthLogPrior(nodes, 10.)
+	} else if branchPrior == "2" {
+		alpha := 1.0
+		beta := 5.
+		lp = DirchletBranchLengthLogPrior(nodes, alpha, beta)
 	}
+
 	acceptanceCount := 0.0
 	topAcceptanceCount := 0.
 	var topAcceptanceRatio float64
@@ -213,6 +218,10 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, br
 		lpstar = math.Log(1.)
 	} else if branchPrior == "1" {
 		lpstar = ExponentialBranchLengthLogPrior(nodes, 1.0)
+	} else if branchPrior == "2" {
+		alpha := 1.0
+		beta := 5.
+		lp = DirchletBranchLengthLogPrior(nodes, alpha, beta)
 	}
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
 	s1 := rand.NewSource(time.Now().UnixNano())
@@ -250,6 +259,10 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 		lpstar = math.Log(1.)
 	} else if branchPrior == "1" {
 		lpstar = ExponentialBranchLengthLogPrior(nodes, 1.0)
+	} else if branchPrior == "2" {
+		alpha := 1.0
+		beta := 5.
+		lp = DirchletBranchLengthLogPrior(nodes, alpha, beta)
 	}
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
 	//fmt.Println(llstar, ll, llstar-ll)

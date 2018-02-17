@@ -22,7 +22,7 @@ func main() {
 	genArg := flag.Int("gen", 5000, "number of MCMC generations to run")
 	brPrior := flag.String("bl", "0", "\tspecifies the prior to place on branch lengths. \n\tOptions:\n\n\t\t0    Flat\n\t\t1    Exponential (mean = 10)\n")
 	fosArg := flag.String("fos", "", "file containing names of fossil tips\n\ttips should be comma-separated")
-	startArg := flag.String("st", "0", "\tSpecify whether to use ML or random starting tree and branch lengths\n\t\t0    ML\n\t\t1    random\n")
+	startArg := flag.String("st", "0", "\tSpecify whether to use ML or random starting tree and branch lengths\n\t\t0    ML\n\t\t1    random\n\t\t2    Compound Dirchlet")
 	missingArg := flag.Bool("mis", true, "indicate whether the character matrix contains missing sites.")
 	printFreqArg := flag.Int("pr", 100, "Frequency with which to print to the screen")
 	sampFreqArg := flag.Int("samp", 100, "Frequency with which to sample from the chain")
