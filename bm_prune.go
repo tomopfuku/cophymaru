@@ -332,14 +332,14 @@ func siteTreeLikeParallel(tree, ch1, ch2, ch3 *Node, startFresh bool, weights []
 }
 
 //WeightedUnrootedLogLikeParallel will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This can be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
-func WeightedUnrootedLogLikeParallel(tree *Node, startFresh bool, weights []float64) (sitelikes float64) {
+func WeightedUnrootedLogLikeParallel(tree *Node, startFresh bool, weights []float64, workers int) (sitelikes float64) {
 	nsites := len(tree.CHLD[0].CONTRT)
 	ch1 := tree.CHLD[0] //.PostorderArray()
 	ch2 := tree.CHLD[1] //.PostorderArray()
 	ch3 := tree.CHLD[2] //.PostorderArray()
 	jobs := make(chan int, nsites)
 	results := make(chan float64, nsites)
-	for w := 0; w < 4; w++ {
+	for w := 0; w < workers; w++ {
 		go siteTreeLikeParallel(tree, ch1, ch2, ch3, startFresh, weights, jobs, results)
 	}
 

@@ -3,6 +3,7 @@ package cophymaru
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"os"
 )
 
@@ -43,8 +44,15 @@ func InitializePrior(priorType string, nodes []*Node) *BranchLengthPrior {
 				ntips++
 			}
 		}
+		ntipfact := factorial(big.NewInt(int64(ntips)))
+		f := new(big.Float).SetInt(ntipfact)
+		var mant float64
+		var exp float64
+		mant = float64(f.MantExp(f))
+		exp = float64(f.MantExp(nil))
+		logfact := math.Log(mant) + (exp)/0.4342944819032518
 		pr.NTIPS = ntips
-		pr.SFACT = factorial(ntips)
+		pr.SFACT = logfact
 		pr.SGAMMA = math.Gamma(pr.ALPHA)
 
 	} else {
@@ -72,19 +80,35 @@ func GammaTreeLengthPrior(nodels []*Node, alpha, beta float64) float64 {
 
 //DirichletBranchLengthLogPrior will return the log prior probability of all branch lengths in a trejke
 func DirichletBranchLengthLogPrior(nodes []*Node, pr *BranchLengthPrior) float64 {
+	//NOTE: this is incorrect right now-- need to fix. the big exponent is calculated by rounding to ints at moment-- need to make a big.Float.Pow
 	T := TreeLength(nodes)
 	x := (2. * float64(pr.NTIPS)) - 4.
-	prob := math.Log(math.Pow(pr.BETA, pr.ALPHA)/pr.SGAMMA) + (-pr.BETA * T) + math.Log(math.Pow(T, (pr.ALPHA-1.-x)))
+	prob := math.Log(math.Pow(pr.BETA, pr.ALPHA)/pr.SGAMMA) + (-pr.BETA * T) //+	math.Log(math.Pow(T, (pr.ALPHA - 1. - x)))
+	b := new(big.Int).Exp(big.NewInt(int64(T)), big.NewInt(int64(pr.ALPHA-1.-x)), nil)
+	f := new(big.Float).SetInt(b)
+	var mant float64
+	var exp float64
+	mant = float64(f.MantExp(f))
+	exp = float64(f.MantExp(nil))
+	logfact := math.Log(mant) + (exp)/0.4342944819032518
+	prob += logfact
 	prob = prob + math.Log(pr.SFACT)
+	//fmt.Println(logfact, pr.SFACT)
 	return prob
 }
 
-func factorial(val int) float64 {
-	fact := float64(val)
-	for i := val; i > 0; i-- {
-		fact = fact * float64(i)
+func factorial(val *big.Int) *big.Int {
+	result := new(big.Int)
+	switch val.Cmp(&big.Int{}) {
+	case -1, 0:
+		result.SetInt64(1)
+	default:
+		result.Set(val)
+		var one big.Int
+		one.SetInt64(1)
+		result.Mul(result, factorial(val.Sub(val, &one)))
 	}
-	return float64(fact)
+	return result
 }
 
 //this calculates the probability of drawing parameter p from an exponential distribution with shape parameter == lambda

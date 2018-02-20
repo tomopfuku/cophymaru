@@ -30,6 +30,7 @@ func main() {
 	weightLLArg := flag.String("w", "flat", "indicate whether to place fossils using the weighted LL algorithm\nOptions:\nflat (default): flat weights\nfloat: weight site log-likelihoods using a multiplier between 0 and 1\nint: weight site log-likelihoods using a multiplier between 0 and 100\n\n")
 	runNameArg := flag.String("o", "cophymaru", "specify the prefix for outfile names")
 	threadArg := flag.Int("T", 1, "maximum number of cores to use during run")
+	workersArg := flag.Int("W", 4, "Number of Go workers to use for LL calculation concurrency")
 	//blMeanArg := flag.Float64("beta", 1.0, "mean branch length for exponential prior or tree length for Dirichlet prior")
 	flag.Parse()
 	//var ntax,ntraits int
@@ -91,7 +92,7 @@ func main() {
 		fmt.Println("Please pick a valid number of cores to use for the run.")
 		os.Exit(0)
 	}
-	chain := cophymaru.InitMCMC(*genArg, treeOutFile, logOutFile, *brPrior, *printFreqArg, *sampFreqArg, *threadArg, 4, mult, weights)
+	chain := cophymaru.InitMCMC(*genArg, treeOutFile, logOutFile, *brPrior, *printFreqArg, *sampFreqArg, *threadArg, *workersArg, mult, weights)
 	start := time.Now()
 	chain.Run(tree, fosSlice)
 	elapsed := time.Since(start)
