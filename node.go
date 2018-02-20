@@ -16,9 +16,10 @@ type Node struct {
 	PRNLEN float64
 	CONTRT []float64
 	//VISITED bool
-	MRK bool
-	MIS []bool //this is a slice of bools that indicates whether the index is missing from CONTRT
-	LL  []float64
+	MRK       bool
+	MIS       []bool //this is a slice of bools that indicates whether the index is missing from CONTRT
+	LL        []float64
+	CONPRNLEN []float64
 }
 
 //PostorderArray will return an array of all the nodes in the tree in Postorder

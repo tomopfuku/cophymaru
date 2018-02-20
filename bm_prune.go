@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"sync"
 )
 
 func postorder(curnode *Node) {
@@ -254,37 +253,103 @@ func MarkAll(nodes []*Node) {
 	}
 }
 
-//NOTE: this does not work correctly.
+//calcUnrootedNodeLikes  will calculate the likelihood of an unrooted tree at each site (i) of the continuous character alignment
+func calcUnrootedSiteLLParallel(tree *Node, i int) (tmpll float64) {
+	var contrast, curVar float64
+	if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false { //do the standard calculation when no subtrees have missing traits
+		contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
+		curVar = tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[1].CONPRNLEN[i]
+		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		tmpCONPRNLEN := ((tree.CHLD[0].CONPRNLEN[i] * tree.CHLD[1].CONPRNLEN[i]) / (tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[1].CONPRNLEN[i]))
+		tmpChar := ((tree.CHLD[0].CONPRNLEN[i] * tree.CHLD[1].CONTRT[i]) + (tree.CHLD[1].CONPRNLEN[i] * tree.CHLD[0].CONTRT[i])) / curVar
+		contrast = tmpChar - tree.CHLD[2].CONTRT[i]
+		curVar = tree.CHLD[2].CONPRNLEN[i] + tmpCONPRNLEN
+		tmpll += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+	} else if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == true { // do standard "rooted" calculation on CHLD[0] and CHLD [1] if CHLD[2] is missing
+		contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
+		curVar = tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[1].CONPRNLEN[i]
+		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+	} else if tree.CHLD[0].MIS[i] == false && tree.CHLD[2].MIS[i] == false && tree.CHLD[1].MIS[i] == true { // do standard "rooted" calculation on CHLD[0] and CHLD [2] if CHLD[1] is missing
+		contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[2].CONTRT[i]
+		curVar = tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[2].CONPRNLEN[i]
+		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+	} else if tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false && tree.CHLD[0].MIS[i] == true { // do standard "rooted" calculation on CHLD[1] and CHLD [2] if CHLD[0] is missing
+		contrast = tree.CHLD[1].CONTRT[i] - tree.CHLD[2].CONTRT[i]
+		curVar = tree.CHLD[1].CONPRNLEN[i] + tree.CHLD[2].CONPRNLEN[i]
+		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+	}
+	return
+}
+
+//calcRootedSiteLL will return the BM likelihood of a tree assuming that no data are missing from the tips.
+func calcRootedSiteLLParallel(n *Node, nlikes *float64, startFresh bool, site int) {
+	for _, chld := range n.CHLD {
+		calcRootedSiteLLParallel(chld, nlikes, startFresh, site)
+	}
+	nchld := len(n.CHLD)
+	if n.MRK == true {
+		if startFresh == false {
+			if nchld != 0 {
+				*nlikes += n.LL[site]
+			}
+		}
+	}
+	if n.MRK == false || startFresh == true {
+		n.CONPRNLEN[site] = n.LEN
+		if nchld != 0 {
+			if nchld != 2 {
+				fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
+				os.Exit(0)
+			}
+			c0 := n.CHLD[0]
+			c1 := n.CHLD[1]
+			curlike := float64(0.0)
+			var tempChar float64
+			curVar := c0.CONPRNLEN[site] + c1.CONPRNLEN[site]
+			contrast := c0.CONTRT[site] - c1.CONTRT[site]
+			curlike += ((-0.5) * ((math.Log(2 * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
+			tempChar = ((c0.CONPRNLEN[site] * c1.CONTRT[site]) + (c1.CONPRNLEN[site] * c0.CONTRT[site])) / (curVar)
+			n.CONTRT[site] = tempChar
+			*nlikes += curlike
+			tempBranchLength := n.CONPRNLEN[site] + ((c0.CONPRNLEN[site] * c1.CONPRNLEN[site]) / (c0.CONPRNLEN[site] + c1.CONPRNLEN[site])) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
+			n.CONPRNLEN[site] = tempBranchLength                                                                                            // need to calculate the "prune length" by adding the length to the uncertainty
+			n.LL[site] = curlike
+			//n.MRK = true
+		}
+	}
+}
+
+func siteTreeLikeParallel(tree, ch1, ch2, ch3 *Node, startFresh bool, weights []float64, jobs <-chan int, results chan<- float64) {
+	for site := range jobs {
+		tmpll := 0.
+		calcRootedSiteLLParallel(ch1, &tmpll, startFresh, site)
+		calcRootedSiteLLParallel(ch2, &tmpll, startFresh, site)
+		calcRootedSiteLLParallel(ch3, &tmpll, startFresh, site)
+		tmpll += calcUnrootedSiteLLParallel(tree, site)
+		tmpll = tmpll * weights[site]
+		results <- tmpll
+	}
+}
+
 //WeightedUnrootedLogLikeParallel will calculate the log-likelihood of an unrooted tree, while assuming that some sites have missing data. This can be used to calculate the likelihoods of trees that have complete trait sampling, but it will be slower than CalcRootedLogLike.
 func WeightedUnrootedLogLikeParallel(tree *Node, startFresh bool, weights []float64) (sitelikes float64) {
-	var wg sync.WaitGroup
+	nsites := len(tree.CHLD[0].CONTRT)
 	ch1 := tree.CHLD[0] //.PostorderArray()
 	ch2 := tree.CHLD[1] //.PostorderArray()
 	ch3 := tree.CHLD[2] //.PostorderArray()
-	nsites := len(tree.CHLD[0].CONTRT)
-	ch := make(chan float64)
-	for site := 0; site < nsites; site++ { //calculate log likelihood at each site
-		wg.Add(1)
-		go func(ch1, ch2, ch3 *Node, startFresh bool, site int) {
-			defer wg.Done()
-			tmpll := 0.
-			calcRootedSiteLL(ch1, &tmpll, startFresh, site)
-			calcRootedSiteLL(ch2, &tmpll, startFresh, site)
-			calcRootedSiteLL(ch3, &tmpll, startFresh, site)
-			tmpll += calcUnrootedSiteLL(tree, site)
-			tmpll = tmpll * weights[site]
-			ch <- tmpll
-		}(ch1, ch2, ch3, startFresh, site)
+	jobs := make(chan int, nsites)
+	results := make(chan float64, nsites)
+	for w := 0; w < 4; w++ {
+		go siteTreeLikeParallel(tree, ch1, ch2, ch3, startFresh, weights, jobs, results)
 	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-	sitelikes = 0.0
-	//for site := 0; site < nsites; site++ {
-	for like := range ch {
-		//tmpll := <-ch
-		sitelikes += like
+
+	for site := 0; site < nsites; site++ {
+		jobs <- site
+	}
+	close(jobs)
+
+	for site := 0; site < nsites; site++ {
+		sitelikes += <-results
 	}
 	return
 }
@@ -365,46 +430,6 @@ func MissingRootedLogLike(n *Node, startFresh bool) (sitelikes float64) {
 	return
 }
 
-/*/calcNodeLikes will calculate the likelihood of a phylogeny at a single site
-func calcRootedSiteLL(nodes []*Node, startFresh bool, site int) float64 {
-	nodelikes := 0.
-	var contrast, curVar float64
-	var ll float64
-	for _, node := range nodes {
-		if node.MRK == true && startFresh == false {
-			fmt.Println("LOGIC ISSUE. CHECK LINE ~350 OF bm_prune.go (calcRootedSiteLL())")
-			node.PRNLEN = node.LEN
-			//if len(node.CHLD) != 0 {
-			//	if site == 0 { //add the pre calculated node log likes during the first pass through the tree
-			//		nodelikes += node.LL
-			//	}
-			//}
-		} else if node.MRK == false || startFresh == true { //recalculate if we said to recalculate all likelihoods or if the node is not marked as calculated
-			node.PRNLEN = node.LEN
-			if len(node.CHLD) != 0 {
-				if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == false {
-					contrast = node.CHLD[0].CONTRT[site] - node.CHLD[1].CONTRT[site]
-					curVar = node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN
-					ll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
-					nodelikes += ll
-					node.LL += ll
-					node.CONTRT[site] = ((node.CHLD[0].PRNLEN * node.CHLD[1].CONTRT[site]) + (node.CHLD[1].PRNLEN * node.CHLD[0].CONTRT[site])) / curVar
-					node.PRNLEN = node.LEN + ((node.CHLD[0].PRNLEN * node.CHLD[1].PRNLEN) / (node.CHLD[0].PRNLEN + node.CHLD[1].PRNLEN))
-				} else if node.CHLD[0].MIS[site] == false && node.CHLD[1].MIS[site] == true {
-					node.PRNLEN += node.CHLD[0].PRNLEN
-					node.CONTRT[site] = node.CHLD[0].CONTRT[site]
-				} else if node.CHLD[1].MIS[site] == false && node.CHLD[0].MIS[site] == true {
-					node.PRNLEN += node.CHLD[1].PRNLEN
-					node.CONTRT[site] = node.CHLD[1].CONTRT[site]
-				} else if node.CHLD[0].MIS[site] == true && node.CHLD[1].MIS[site] == true {
-					node.MIS[site] = true
-				}
-			}
-		}
-	}
-	return nodelikes
-}
-*/
 //calcRootedSiteLL will return the BM likelihood of a tree assuming that no data are missing from the tips.
 func calcRootedSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 	for _, chld := range n.CHLD {

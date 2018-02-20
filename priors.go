@@ -1,8 +1,58 @@
 package cophymaru
 
 import (
+	"fmt"
 	"math"
+	"os"
 )
+
+//BranchLengthPrior is a struct for specifying and calculating different priors
+type BranchLengthPrior struct {
+	TYPE   string
+	ALPHA  float64
+	BETA   float64
+	NTIPS  int
+	SGAMMA float64
+	SFACT  float64
+}
+
+//Calc will return the log prior probability of the branch length prior
+func (pr *BranchLengthPrior) Calc(nodes []*Node) float64 {
+	if pr.TYPE == "1" {
+		return ExponentialBranchLengthLogPrior(nodes, pr.BETA)
+	} else if pr.TYPE == "2" {
+		return DirichletBranchLengthLogPrior(nodes, pr)
+	}
+	return 0.0
+}
+
+//InitializePrior will set up a new instance of a prior
+func InitializePrior(priorType string, nodes []*Node) *BranchLengthPrior {
+	pr := new(BranchLengthPrior)
+	pr.TYPE = priorType
+	if pr.TYPE == "0" {
+		pr.BETA = 0.
+	} else if pr.TYPE == "1" {
+		pr.BETA = 1.0
+	} else if pr.TYPE == "2" {
+		pr.ALPHA = 1.0
+		pr.BETA = 10.0
+		ntips := 0
+		for _, n := range nodes {
+			if len(n.CHLD) == 0 {
+				ntips++
+			}
+		}
+		pr.NTIPS = ntips
+		pr.SFACT = factorial(ntips)
+		pr.SGAMMA = math.Gamma(pr.ALPHA)
+
+	} else {
+		fmt.Println("PLEASE SPECIFY VALID OPTION FOR PRIOR. TYPE maru -h TO SEE OPTIONS")
+		os.Exit(0)
+	}
+	return pr
+}
 
 func normalPDF(p float64, mean float64, sd float64) float64 {
 	prob := (1.0 / math.Sqrt(2.0*math.Pi*sd)) * math.Exp(-(math.Pow(p-mean, 2.) / (2 * sd)))
@@ -20,19 +70,13 @@ func GammaTreeLengthPrior(nodels []*Node, alpha, beta float64) float64 {
 	return gammaPDF(tl, alpha, beta)
 }
 
-//DirchletBranchLengthLogPrior will return the log prior probability of all branch lengths in a trejke
-func DirchletBranchLengthLogPrior(nodels []*Node, alpha, beta float64) float64 {
-	T := TreeLength(nodels)
-	ntips := 0
-	for _, n := range nodels {
-		if len(n.CHLD) == 0 {
-			ntips++
-		}
-	}
-	x := (2. * float64(ntips)) - 4.
-	prob := (math.Pow(beta, alpha) / math.Gamma(alpha)) * math.Exp(-beta*T) * math.Pow(T, (alpha-1.-x))
-	prob = prob * factorial(ntips)
-	return math.Log(prob)
+//DirichletBranchLengthLogPrior will return the log prior probability of all branch lengths in a trejke
+func DirichletBranchLengthLogPrior(nodes []*Node, pr *BranchLengthPrior) float64 {
+	T := TreeLength(nodes)
+	x := (2. * float64(pr.NTIPS)) - 4.
+	prob := math.Log(math.Pow(pr.BETA, pr.ALPHA)/pr.SGAMMA) + (-pr.BETA * T) + math.Log(math.Pow(T, (pr.ALPHA-1.-x)))
+	prob = prob + math.Log(pr.SFACT)
+	return prob
 }
 
 func factorial(val int) float64 {

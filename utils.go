@@ -9,6 +9,23 @@ import (
 	"time"
 )
 
+//InternalNodeSlice will return a slice containing only internal nodes
+func InternalNodeSlice(nodes []*Node) (inNodes []*Node) {
+	for _, n := range nodes {
+		if len(n.CHLD) == 2 {
+			inNodes = append(inNodes, n)
+		}
+	}
+	return
+}
+
+//InitParallelPRNLEN will set up empty slices for the prnlens
+func InitParallelPRNLEN(nodes []*Node) {
+	for _, n := range nodes {
+		n.CONPRNLEN = make([]float64, len(nodes[0].CONTRT))
+	}
+}
+
 //TreeLength will return the total length of a slice of nodes
 func TreeLength(nodes []*Node) float64 {
 	len := 0.
