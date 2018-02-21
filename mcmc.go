@@ -101,7 +101,7 @@ func InitMCMC(gen int, treeOut, logOut string, branchPrior string, printFreq, wr
 }
 
 //initializeRun sets global variables for the run
-func initializeRun(chain *MCMC, tree *Node, fnames []string) (nodes, fos, innodes []*Node, prior *BranchLengthPrior, treeLogLikelihood *LL) {
+func (chain *MCMC) initializeRun(tree *Node, fnames []string) (nodes, fos, innodes []*Node, prior *BranchLengthPrior, treeLogLikelihood *LL) {
 	nodes = tree.PreorderArray()[1:]
 	fos = getFossilNodesFromLabel(fnames, nodes)
 	innodes = InternalNodeSlice(nodes)
@@ -138,7 +138,7 @@ func (chain *MCMC) Run(tree *Node, fnames []string) {
 		log.Fatal(err)
 	}
 	logWriter := bufio.NewWriter(logFile)
-	nodes, fos, inNodes, branchPrior, treeLogLikelihood := initializeRun(chain, tree, fnames)
+	nodes, fos, inNodes, branchPrior, treeLogLikelihood := chain.initializeRun(tree, fnames)
 	ll := treeLogLikelihood.Calc(tree, true)
 	lp := branchPrior.Calc(nodes)
 	acceptanceCount := 0.0

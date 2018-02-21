@@ -61,7 +61,8 @@ func InitializePrior(priorType string, nodes []*Node) *BranchLengthPrior {
 		//mant = float64(f.MantExp(f))
 		//exp = float64(f.MantExp(nil))
 		//logfact := math.Log(mant) + (exp)/0.4342944819032518
-		logfact := logFactorial(ntips)
+		x := (2 * ntips) - 4
+		logfact := logFactorial(x)
 		pr.NTIPS = ntips
 		pr.SFACT = logfact
 		pr.SGAMMA = math.Gamma(pr.ALPHA)
@@ -97,9 +98,9 @@ func DirichletBranchLengthLogPrior(nodes []*Node, pr *BranchLengthPrior) float64
 	pow := pr.ALPHA - 1. - x
 	//prob := math.Log(math.Pow(pr.BETA, pr.ALPHA) / pr.SGAMMA)
 	prob := (pr.ALPHA * math.Log(pr.BETA)) - math.Log(pr.SGAMMA)
-	prob += (-pr.BETA * T) //+	math.Log(math.Pow(T, (pr.ALPHA - 1. - x))) // tranlated into log math from yang book
+	prob += (-pr.BETA * T) //+	math.Log(math.Pow(T, (pr.ALPHA - 1. - x))) // tranlated into log math from version in yang book
 	prob += (pow * math.Log(T))
-	prob = prob + math.Log(pr.SFACT)
+	prob = prob + pr.SFACT
 	//fmt.Println(logfact, pr.SFACT)
 	return prob
 }
