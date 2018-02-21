@@ -27,6 +27,14 @@ func (pr *BranchLengthPrior) Calc(nodes []*Node) float64 {
 	return 0.0
 }
 
+func logFactorial(val int) (x float64) {
+	x = 0.
+	for i := 1; i <= val; i++ {
+		x += math.Log(float64(i))
+	}
+	return
+}
+
 //InitializePrior will set up a new instance of a prior
 func InitializePrior(priorType string, nodes []*Node) *BranchLengthPrior {
 	pr := new(BranchLengthPrior)
@@ -36,21 +44,24 @@ func InitializePrior(priorType string, nodes []*Node) *BranchLengthPrior {
 	} else if pr.TYPE == "1" {
 		pr.BETA = 1.0
 	} else if pr.TYPE == "2" {
+		T := TreeLength(nodes)
 		pr.ALPHA = 1.0
-		pr.BETA = 10.0
+		//pr.BETA = 10.0
+		pr.BETA = T
 		ntips := 0
 		for _, n := range nodes {
 			if len(n.CHLD) == 0 {
 				ntips++
 			}
 		}
-		ntipfact := factorial(big.NewInt(int64(ntips)))
-		f := new(big.Float).SetInt(ntipfact)
-		var mant float64
-		var exp float64
-		mant = float64(f.MantExp(f))
-		exp = float64(f.MantExp(nil))
-		logfact := math.Log(mant) + (exp)/0.4342944819032518
+		//ntipfact := factorial(big.NewInt(int64(ntips)))
+		//f := new(big.Float).SetInt(ntipfact)
+		//var mant float64
+		//var exp float64
+		//mant = float64(f.MantExp(f))
+		//exp = float64(f.MantExp(nil))
+		//logfact := math.Log(mant) + (exp)/0.4342944819032518
+		logfact := logFactorial(ntips)
 		pr.NTIPS = ntips
 		pr.SFACT = logfact
 		pr.SGAMMA = math.Gamma(pr.ALPHA)
@@ -83,15 +94,11 @@ func DirichletBranchLengthLogPrior(nodes []*Node, pr *BranchLengthPrior) float64
 	//NOTE: this is incorrect right now-- need to fix. the big exponent is calculated by rounding to ints at moment-- need to make a big.Float.Pow
 	T := TreeLength(nodes)
 	x := (2. * float64(pr.NTIPS)) - 4.
-	prob := math.Log(math.Pow(pr.BETA, pr.ALPHA)/pr.SGAMMA) + (-pr.BETA * T) //+	math.Log(math.Pow(T, (pr.ALPHA - 1. - x)))
-	b := new(big.Int).Exp(big.NewInt(int64(T)), big.NewInt(int64(pr.ALPHA-1.-x)), nil)
-	f := new(big.Float).SetInt(b)
-	var mant float64
-	var exp float64
-	mant = float64(f.MantExp(f))
-	exp = float64(f.MantExp(nil))
-	logfact := math.Log(mant) + (exp)/0.4342944819032518
-	prob += logfact
+	pow := pr.ALPHA - 1. - x
+	//prob := math.Log(math.Pow(pr.BETA, pr.ALPHA) / pr.SGAMMA)
+	prob := (pr.ALPHA * math.Log(pr.BETA)) - math.Log(pr.SGAMMA)
+	prob += (-pr.BETA * T) //+	math.Log(math.Pow(T, (pr.ALPHA - 1. - x))) // tranlated into log math from yang book
+	prob += (pow * math.Log(T))
 	prob = prob + math.Log(pr.SFACT)
 	//fmt.Println(logfact, pr.SFACT)
 	return prob
