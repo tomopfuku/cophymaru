@@ -4,7 +4,9 @@ import (
 	"cophymaru"
 	"flag"
 	"fmt"
+	"log"
 	"os"
+	"runtime/pprof"
 	"strings"
 	"time"
 )
@@ -33,6 +35,12 @@ func main() {
 	workersArg := flag.Int("W", 4, "Number of Go workers to use for LL calculation concurrency")
 	//blMeanArg := flag.Float64("beta", 1.0, "mean branch length for exponential prior or tree length for Dirichlet prior")
 	flag.Parse()
+	f, err := os.Create("profile")
+	if err != nil {
+		log.Fatal(err)
+	}
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
 	//var ntax,ntraits int
 	nwk := cophymaru.ReadLine(*treeArg)[0]
 	tree := cophymaru.ReadTree(nwk)

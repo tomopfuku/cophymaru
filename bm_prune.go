@@ -256,27 +256,28 @@ func MarkAll(nodes []*Node) {
 //calcUnrootedNodeLikes  will calculate the likelihood of an unrooted tree at each site (i) of the continuous character alignment
 func calcUnrootedSiteLLParallel(tree *Node, i int) (tmpll float64) {
 	var contrast, curVar float64
+	log2pi := 1.8378770664093453
 	if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false { //do the standard calculation when no subtrees have missing traits
 		contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
 		curVar = tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[1].CONPRNLEN[i]
-		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		tmpll = ((-0.5) * ((log2pi) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 		tmpCONPRNLEN := ((tree.CHLD[0].CONPRNLEN[i] * tree.CHLD[1].CONPRNLEN[i]) / (tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[1].CONPRNLEN[i]))
 		tmpChar := ((tree.CHLD[0].CONPRNLEN[i] * tree.CHLD[1].CONTRT[i]) + (tree.CHLD[1].CONPRNLEN[i] * tree.CHLD[0].CONTRT[i])) / curVar
 		contrast = tmpChar - tree.CHLD[2].CONTRT[i]
 		curVar = tree.CHLD[2].CONPRNLEN[i] + tmpCONPRNLEN
-		tmpll += ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		tmpll += ((-0.5) * ((log2pi) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 	} else if tree.CHLD[0].MIS[i] == false && tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == true { // do standard "rooted" calculation on CHLD[0] and CHLD [1] if CHLD[2] is missing
 		contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[1].CONTRT[i]
 		curVar = tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[1].CONPRNLEN[i]
-		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		tmpll = ((-0.5) * ((log2pi) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 	} else if tree.CHLD[0].MIS[i] == false && tree.CHLD[2].MIS[i] == false && tree.CHLD[1].MIS[i] == true { // do standard "rooted" calculation on CHLD[0] and CHLD [2] if CHLD[1] is missing
 		contrast = tree.CHLD[0].CONTRT[i] - tree.CHLD[2].CONTRT[i]
 		curVar = tree.CHLD[0].CONPRNLEN[i] + tree.CHLD[2].CONPRNLEN[i]
-		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		tmpll = ((-0.5) * ((log2pi) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 	} else if tree.CHLD[1].MIS[i] == false && tree.CHLD[2].MIS[i] == false && tree.CHLD[0].MIS[i] == true { // do standard "rooted" calculation on CHLD[1] and CHLD [2] if CHLD[0] is missing
 		contrast = tree.CHLD[1].CONTRT[i] - tree.CHLD[2].CONTRT[i]
 		curVar = tree.CHLD[1].CONPRNLEN[i] + tree.CHLD[2].CONPRNLEN[i]
-		tmpll = ((-0.5) * ((math.Log(2. * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
+		tmpll = ((-0.5) * ((log2pi) + (math.Log(curVar)) + (math.Pow(contrast, 2.) / (curVar))))
 	}
 	return
 }
@@ -296,6 +297,7 @@ func calcRootedSiteLLParallel(n *Node, nlikes *float64, startFresh bool, site in
 	}
 	if n.MRK == false || startFresh == true {
 		n.CONPRNLEN[site] = n.LEN
+		log2pi := 1.8378770664093453
 		if nchld != 0 {
 			if nchld != 2 {
 				fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
@@ -307,7 +309,7 @@ func calcRootedSiteLLParallel(n *Node, nlikes *float64, startFresh bool, site in
 			var tempChar float64
 			curVar := c0.CONPRNLEN[site] + c1.CONPRNLEN[site]
 			contrast := c0.CONTRT[site] - c1.CONTRT[site]
-			curlike += ((-0.5) * ((math.Log(2 * math.Pi)) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
+			curlike += ((-0.5) * ((log2pi) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
 			tempChar = ((c0.CONPRNLEN[site] * c1.CONTRT[site]) + (c1.CONPRNLEN[site] * c0.CONTRT[site])) / (curVar)
 			n.CONTRT[site] = tempChar
 			*nlikes += curlike

@@ -167,3 +167,11 @@ func (n *Node) UnmarkAll() {
 		node.MRK = false
 	}
 }
+
+//MarkAll will unmark all of the nodes on a tree
+func (n *Node) MarkAll() {
+	nodes := n.PreorderArray()
+	for _, node := range nodes {
+		node.MRK = true
+	}
+}
