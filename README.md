@@ -1,7 +1,8 @@
 # cophymaru
 _cophymaru_ is a phylogenetics package that uses continuous character data to recover the placement of fossil taxa on reference trees comprised of extant species (often inferred from molecular data). 
 
-type
+type:
+
         maru -h 
 
 to reveal the set of options that specifies the name(s) of fossil(s), branch length prior, MCMC settings, number of threads, and other parameters. 
