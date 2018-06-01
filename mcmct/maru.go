@@ -58,6 +58,18 @@ func main() {
 	fmt.Println(l1, l2)
 	os.Exit(0)
 	*/
+	nz := tree.PreorderArray()
+	var missing []string
+	for _, n := range nz {
+		if len(n.CONTRT) == 0 {
+			missing = append(missing, n.NAME)
+		}
+	}
+	if len(missing) != 0 {
+		fmt.Println("these taxa that are in the tree have no trait data:", missing)
+		os.Exit(0)
+	}
+
 	cophymaru.IterateBMLengths(tree, *iterArg)
 	var weights []float64
 	if *weightLLArg != "flat" {
