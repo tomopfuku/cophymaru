@@ -9,7 +9,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"time"
 )
 
 func brlenSlidingWindow(theta float64, wsize float64) (thetaStar float64) {
@@ -100,8 +99,8 @@ func InitMCMC(gen int, treeOut, logOut string, branchPrior string, printFreq, wr
 	return
 }
 
-//initializeRun sets global variables for the run
-func (chain *MCMC) initializeRun(tree *Node, fnames []string) (nodes, fos, innodes []*Node, prior *BranchLengthPrior, treeLogLikelihood *LL) {
+//initializePlacementRun sets global variables for the run
+func (chain *MCMC) initializePlacementRun(tree *Node, fnames []string) (nodes, fos, innodes []*Node, prior *BranchLengthPrior, treeLogLikelihood *LL) {
 	nodes = tree.PreorderArray()[1:]
 	fos = getFossilNodesFromLabel(fnames, nodes)
 	innodes = InternalNodeSlice(nodes)
@@ -109,6 +108,19 @@ func (chain *MCMC) initializeRun(tree *Node, fnames []string) (nodes, fos, innod
 	prior = InitializePrior(chain.BRANCHPRIOR, nodes)
 	treeLogLikelihood = InitLL(chain.MULTI, chain.WORKERS, chain.SITEWEIGHTS)
 	runtime.GOMAXPROCS(chain.PROC)
+	chain.ANALYSIS = "place"
+	return
+}
+
+//initializeReconRun sets global variables for the run
+func (chain *MCMC) initializeReconRun(tree *Node) (nodes, innodes []*Node, prior *BranchLengthPrior, treeLogLikelihood *LL) {
+	nodes = tree.PreorderArray()[1:]
+	innodes = InternalNodeSlice(nodes)
+	InitParallelPRNLEN(nodes)
+	prior = InitializePrior(chain.BRANCHPRIOR, nodes)
+	treeLogLikelihood = InitLL(chain.MULTI, chain.WORKERS, chain.SITEWEIGHTS)
+	runtime.GOMAXPROCS(chain.PROC)
+	chain.ANALYSIS = "full"
 	return
 }
 
@@ -124,10 +136,11 @@ type MCMC struct {
 	WORKERS     int
 	MULTI       bool
 	SITEWEIGHTS []float64
+	ANALYSIS    string
 }
 
-//Run will run Markov Chain Monte Carlo simulations, adjusting branch lengths and fossil placements
-func (chain *MCMC) Run(tree *Node, fnames []string) {
+//FullRun will run Markov Chain Monte Carlo simulations, adjusting branch lengths and entire tree topology
+func (chain *MCMC) FullRun(tree *Node) {
 	f, err := os.Create(chain.TREEOUTFILE)
 	if err != nil {
 		log.Fatal(err)
@@ -138,7 +151,7 @@ func (chain *MCMC) Run(tree *Node, fnames []string) {
 		log.Fatal(err)
 	}
 	logWriter := bufio.NewWriter(logFile)
-	nodes, fos, inNodes, branchPrior, treeLogLikelihood := chain.initializeRun(tree, fnames)
+	nodes, inNodes, branchPrior, treeLogLikelihood := chain.initializeReconRun(tree)
 	ll := treeLogLikelihood.Calc(tree, true)
 	lp := branchPrior.Calc(nodes)
 	acceptanceCount := 0.0
@@ -149,14 +162,13 @@ func (chain *MCMC) Run(tree *Node, fnames []string) {
 		oldLL = ll
 		if i%3 == 0 || i == 0 {
 			//lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
-			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, chain, branchPrior, treeLogLikelihood)
+			//lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, chain, branchPrior, treeLogLikelihood)
+			lp, ll = sprUpdate(ll, lp, nodes, tree, chain, branchPrior, treeLogLikelihood)
 			if ll != oldLL {
 				topAcceptanceCount = topAcceptanceCount + 1.0
 			}
 		} else {
-			s1 := rand.NewSource(time.Now().UnixNano())
-			r1 := rand.New(s1)
-			r := r1.Float64()
+			r := rand.Float64()
 			if r > 0.1 { // apply single branch length update 95% of the time
 				lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLENS
 			} else {
@@ -183,13 +195,72 @@ func (chain *MCMC) Run(tree *Node, fnames []string) {
 
 		if i%chain.WRITEFREQ == 0 {
 			fmt.Fprint(logWriter, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\n")
-			/*
-				for _, ln := range nodes {
-					fmt.Fprint(lw, strconv.FormatFloat(ln.LEN, 'f', -1, 64)+"\t")
-				}
-				fmt.Fprint(lw, "\n")
-			*/
-			//writeTreeFile(tree.Newick(true),w)
+			fmt.Fprint(w, tree.Newick(true)+";\n")
+		}
+	}
+	logWriter.Flush()
+	err = w.Flush()
+	if err != nil {
+		log.Fatal(err)
+	}
+	f.Close()
+}
+
+//Run will run Markov Chain Monte Carlo simulations, adjusting branch lengths and fossil placements
+func (chain *MCMC) Run(tree *Node, fnames []string) {
+	f, err := os.Create(chain.TREEOUTFILE)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w := bufio.NewWriter(f)
+	logFile, err := os.Create(chain.LOGOUTFILE)
+	if err != nil {
+		log.Fatal(err)
+	}
+	logWriter := bufio.NewWriter(logFile)
+	nodes, fos, inNodes, branchPrior, treeLogLikelihood := chain.initializePlacementRun(tree, fnames)
+	ll := treeLogLikelihood.Calc(tree, true)
+	lp := branchPrior.Calc(nodes)
+	acceptanceCount := 0.0
+	topAcceptanceCount := 0.
+	var oldLL, acceptanceRatio, topAcceptanceRatio float64
+	epsilon := 0.1
+	for i := 0; i < chain.NGEN; i++ {
+		oldLL = ll
+		if i%3 == 0 || i == 0 {
+			//lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
+			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, chain, branchPrior, treeLogLikelihood)
+			if ll != oldLL {
+				topAcceptanceCount = topAcceptanceCount + 1.0
+			}
+		} else {
+			r := rand.Float64()
+			if r > 0.1 { // apply single branch length update 95% of the time
+				lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLENS
+			} else {
+				lp, ll = cladeBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon)
+			}
+			if ll != oldLL {
+				acceptanceCount = acceptanceCount + 1.0
+			}
+		}
+
+		if i%200 == 0 && i <= 10000 && i != 0 { // use burn in period to adjust the branch length multiplier step length every 200 generations
+			acceptanceRatio = acceptanceCount / float64(i)
+			epsilon = adjustBranchLengthStepLength(epsilon, acceptanceRatio)
+		}
+		if i == 0 {
+			fmt.Println("generation", "logPrior", "logLikelihood", "acceptanceRatio", "topologyAcceptanceRatio")
+			fmt.Println("0", lp, ll, "NA", "NA")
+		}
+		if i%chain.PRINTFREQ == 0 && i != 0 {
+			acceptanceRatio = acceptanceCount / float64(i)
+			topAcceptanceRatio = topAcceptanceCount / float64(i)
+			fmt.Println(i, lp, ll, acceptanceRatio, topAcceptanceRatio)
+		}
+
+		if i%chain.WRITEFREQ == 0 {
+			fmt.Fprint(logWriter, strconv.Itoa(i)+"\t"+strconv.FormatFloat(lp, 'f', -1, 64)+"\t"+strconv.FormatFloat(ll, 'f', -1, 64)+"\n")
 			fmt.Fprint(w, tree.Newick(true)+";\n")
 		}
 	}
@@ -216,20 +287,10 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, ch
 	x, p, lastn := PruneFossilTip(fn)
 	r := GraftFossilTip(fn.PAR, reattach)
 	propRat := r / (x * p)
-	//tree.UnmarkAll()
-	//lastn.UnmarkToRoot(tree)
-	//fn.UnmarkToRoot(tree)
-	//reattach.UnmarkToRoot(tree)
-	//llstar := WeightedUnrootedLogLike(tree, true, weights)
 	llstar := treeLL.Calc(tree, true)
-	//llstar1 := WeightedUnrootedLogLike(tree, true, weights)
-	//MarkAll(nodes)
-	//fmt.Println(llstar, llstar1)
 	lpstar := branchPrior.Calc(nodes)
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	r = r1.Float64()
+	r = rand.Float64()
 	if r < alpha {
 		ll = llstar
 		lp = lpstar
@@ -238,9 +299,45 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, ch
 		GraftFossilTip(fn.PAR, lastn)
 		lastn.LEN = x
 		fn.PAR.LEN = p
-		//fn.UnmarkToRoot(tree)
-		//reattach.UnmarkToRoot(tree)
-		//tree.UnmarkAll()
+	}
+	return lp, ll
+}
+
+//this move prunes and regrafts a fossil, creating random variables for the altered branch lengths
+//the procedure is basically the same as the SPR move as described in the Yang (2014) Mol. Evol. book
+func sprUpdate(ll, lp float64, nodes []*Node, tree *Node, chain *MCMC, branchPrior *BranchLengthPrior, treeLL *LL) (float64, float64) {
+	//fmt.Println(tree.Newick(true))
+	fn := drawRandomSubtree(tree, nodes[1:]) //draw a random fossil tip
+	excluden := make(map[*Node]bool)
+	excluden[fn.PAR] = true
+	for _, n := range fn.PreorderArray() {
+		excluden[n] = true
+	}
+	var rdraw []*Node
+	for _, n := range nodes[1:] {
+		if _, ok := excluden[n]; !ok { //if the current node is NOT in the subtree subtending from the prune node
+			rdraw = append(rdraw, n)
+		}
+	}
+	reattach := drawRandomReattachment(fn, rdraw)
+	//fmt.Println("PRN", fn.PAR.Newick(true))
+	//fmt.Println("REATTACH", reattach.Newick(true))
+	x, p, lastn := PruneFossilTip(fn)
+	r := GraftFossilTip(fn.PAR, reattach)
+	//fmt.Println(tree.Newick(true))
+	propRat := r / (x * p)
+	llstar := treeLL.Calc(tree, true)
+	lpstar := branchPrior.Calc(nodes)
+	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
+	r = rand.Float64()
+	if r < alpha {
+		ll = llstar
+		lp = lpstar
+	} else { //move fossil back to its previous position and restore old branch lengths
+		PruneFossilTip(fn)
+		GraftFossilTip(fn.PAR, lastn)
+		lastn.LEN = x
+		fn.PAR.LEN = p
 	}
 	return lp, ll
 }
@@ -259,9 +356,7 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
 	//fmt.Println(llstar, ll, llstar-ll)
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	r := r1.Float64()
+	r := rand.Float64()
 	if r < alpha {
 		ll = llstar
 		lp = lpstar
@@ -290,9 +385,7 @@ func cladeBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node,
 
 	alpha := math.Exp(lpstar-lp) * math.Exp(llstar-ll) * propRat
 	//fmt.Println(llstar, ll, llstar-ll)
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	r := r1.Float64()
+	r := rand.Float64()
 	if r < alpha {
 		ll = llstar
 		lp = lpstar
@@ -306,27 +399,21 @@ func cladeBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node,
 }
 
 func drawRandomNode(n []*Node) (rnode *Node) {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	rnoden := r1.Intn(len(n))
+	rnoden := rand.Intn(len(n))
 	rnode = n[rnoden]
 	return
 }
 
 //RandomNode will pull a random node from a slice of nodes
 func RandomNode(nodes []*Node) (rnode *Node) {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	rnoden := r1.Intn(len(nodes))
+	rnoden := rand.Intn(len(nodes))
 	rnode = nodes[rnoden] //choose a random node
 	return
 }
 
 //RandomInternalNode will draw a random internal node
 func RandomInternalNode(nodes []*Node) (rnode *Node) {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	rnoden := r1.Intn(len(nodes))
+	rnoden := rand.Intn(len(nodes))
 	rnode = nodes[rnoden] //choose a random reattachment point
 	if len(rnode.CHLD) == 0 {
 		rnode = RandomInternalNode(nodes)
@@ -334,10 +421,19 @@ func RandomInternalNode(nodes []*Node) (rnode *Node) {
 	return
 }
 
+func drawRandomSubtree(rt *Node, nodes []*Node) (rnode *Node) {
+	rnoden := rand.Intn(len(nodes))
+	rnode = nodes[rnoden] //choose a random reattachment point
+	if rnode.PAR == rt {
+		rnode = drawRandomSubtree(rt, nodes)
+	} else if rnode == rt {
+		rnode = drawRandomSubtree(rt, nodes)
+	}
+	return
+}
+
 func drawRandomReattachment(fn *Node, nodes []*Node) (rnode *Node) {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	rnoden := r1.Intn(len(nodes))
+	rnoden := rand.Intn(len(nodes))
 	rnode = nodes[rnoden] //choose a random reattachment point
 	if rnode == fn {
 		rnode = drawRandomReattachment(fn, nodes)
@@ -376,9 +472,7 @@ func GraftFossilTip(newpar *Node, n *Node) float64 {
 	n.PAR.AddChild(newpar)
 	n.PAR.RemoveChild(n)
 	newpar.AddChild(n)
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	u := r1.Float64()
+	u := rand.Float64()
 	newpar.LEN = u * n.LEN
 	n.LEN = n.LEN * (1 - u)
 	return r
