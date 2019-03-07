@@ -20,6 +20,11 @@ type Node struct {
 	MIS       []bool //this is a slice of bools that indicates whether the index is missing from CONTRT
 	LL        []float64
 	CONPRNLEN []float64
+	FAD       float64
+	LAD       float64
+	HEIGHT    float64
+	FINDS     float64
+	RATE      float64
 }
 
 //PostorderArray will return an array of all the nodes in the tree in Postorder

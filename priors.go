@@ -27,7 +27,7 @@ func (pr *BranchLengthPrior) Calc(nodes []*Node) float64 {
 	return 0.0
 }
 
-func logFactorial(val int) (x float64) {
+func LogFactorial(val int) (x float64) {
 	x = 0.
 	for i := 1; i <= val; i++ {
 		x += math.Log(float64(i))
@@ -62,7 +62,7 @@ func InitializePrior(priorType string, nodes []*Node) *BranchLengthPrior {
 		//exp = float64(f.MantExp(nil))
 		//logfact := math.Log(mant) + (exp)/0.4342944819032518
 		x := (2 * ntips) - 4
-		logfact := logFactorial(x)
+		logfact := LogFactorial(x)
 		pr.NTIPS = ntips
 		pr.SFACT = logfact
 		pr.SGAMMA = math.Gamma(pr.ALPHA)
