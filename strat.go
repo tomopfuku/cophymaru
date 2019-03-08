@@ -49,7 +49,7 @@ func ReadStrat(stratfl string, nodels []*Node) {
 		if len(ss) != 4 {
 			fmt.Println("this line:")
 			fmt.Println(line)
-			fmt.Println("does not have 4 columns. should be <taxon\tFAD\tLAD>")
+			fmt.Println("does not have 4 columns. should be <taxon\tFAD\tLAD\tn_occurrences>")
 			os.Exit(0)
 		}
 		curtax := ss[0]
