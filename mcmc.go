@@ -84,7 +84,7 @@ func initOutfile(flnm string) *bufio.Writer {
 }
 
 //InitMCMC sets up all of the attributes of the MCMC run
-func InitMCMC(gen int, treeOut, logOut string, branchPrior string, printFreq, writeFreq, maxProc, workers int, multi bool, weights []float64) (chain *MCMC) {
+func InitMCMC(gen int, treeOut, logOut string, branchPrior string, printFreq, writeFreq, maxProc, workers int, multi bool, weights []float64, analysis string) (chain *MCMC) {
 	chain = new(MCMC)
 	chain.NGEN = gen
 	chain.TREEOUTFILE = treeOut
@@ -96,6 +96,7 @@ func InitMCMC(gen int, treeOut, logOut string, branchPrior string, printFreq, wr
 	chain.WORKERS = workers
 	chain.MULTI = multi
 	chain.SITEWEIGHTS = weights
+	chain.ANALYSIS = analysis
 	return
 }
 
@@ -108,7 +109,6 @@ func (chain *MCMC) initializePlacementRun(tree *Node, fnames []string) (nodes, f
 	prior = InitializePrior(chain.BRANCHPRIOR, nodes)
 	treeLogLikelihood = InitLL(chain.MULTI, chain.WORKERS, chain.SITEWEIGHTS)
 	runtime.GOMAXPROCS(chain.PROC)
-	chain.ANALYSIS = "place"
 	return
 }
 
@@ -120,7 +120,6 @@ func (chain *MCMC) initializeReconRun(tree *Node) (nodes, innodes []*Node, prior
 	prior = InitializePrior(chain.BRANCHPRIOR, nodes)
 	treeLogLikelihood = InitLL(chain.MULTI, chain.WORKERS, chain.SITEWEIGHTS)
 	runtime.GOMAXPROCS(chain.PROC)
-	chain.ANALYSIS = "full"
 	return
 }
 
@@ -158,14 +157,27 @@ func (chain *MCMC) FullRun(tree *Node) {
 	topAcceptanceCount := 0.
 	var oldLL, acceptanceRatio, topAcceptanceRatio float64
 	epsilon := 0.1
+	if chain.ANALYSIS == "brlen" {
+		topAcceptanceCount = 1.0
+	}
 	for i := 0; i < chain.NGEN; i++ {
 		oldLL = ll
-		if i%3 == 0 || i == 0 {
-			//lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
-			//lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, chain, branchPrior, treeLogLikelihood)
-			lp, ll = sprUpdate(ll, lp, nodes, tree, chain, branchPrior, treeLogLikelihood)
-			if ll != oldLL {
-				topAcceptanceCount = topAcceptanceCount + 1.0
+		if chain.ANALYSIS == "full" {
+			if i%3 == 0 || i == 0 {
+				lp, ll = sprUpdate(ll, lp, nodes, tree, chain, branchPrior, treeLogLikelihood)
+				if ll != oldLL {
+					topAcceptanceCount = topAcceptanceCount + 1.0
+				}
+			} else {
+				r := rand.Float64()
+				if r > 0.1 { // apply single branch length update 95% of the time
+					lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLENS
+				} else {
+					lp, ll = cladeBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon)
+				}
+				if ll != oldLL {
+					acceptanceCount = acceptanceCount + 1.0
+				}
 			}
 		} else {
 			r := rand.Float64()
@@ -178,7 +190,6 @@ func (chain *MCMC) FullRun(tree *Node) {
 				acceptanceCount = acceptanceCount + 1.0
 			}
 		}
-
 		if i%200 == 0 && i <= 10000 && i != 0 { // use burn in period to adjust the branch length multiplier step length every 200 generations
 			acceptanceRatio = acceptanceCount / float64(i)
 			epsilon = adjustBranchLengthStepLength(epsilon, acceptanceRatio)

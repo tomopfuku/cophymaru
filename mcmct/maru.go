@@ -34,7 +34,7 @@ func main() {
 	runNameArg := flag.String("o", "cophymaru", "specify the prefix for outfile names")
 	threadArg := flag.Int("T", 1, "maximum number of cores to use during run")
 	workersArg := flag.Int("W", 4, "Number of Go workers to use for LL calculation concurrency")
-	analysisArg := flag.Int("f", 0, "type of analysis to run:\n0\tfossil placement\n1\tfull topology search\n")
+	analysisArg := flag.String("f", "place", "type of analysis to run:\nplace\tfossil placement\nfull\tfull topology search\nbrlen\tbranch length optimization\n")
 	//blMeanArg := flag.Float64("beta", 1.0, "mean branch length for exponential prior or tree length for Dirichlet prior")
 	flag.Parse()
 	f, err := os.Create("profile")
@@ -46,7 +46,7 @@ func main() {
 	//var ntax,ntraits int
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	if *analysisArg == 0 {
+	if *analysisArg == "place" {
 		nwk := cophymaru.ReadLine(*treeArg)[0]
 		tree := cophymaru.ReadTree(nwk)
 		//fmt.Println("SUCCESSFULLY READ IN TREE ", tree.Newick(true))
@@ -117,12 +117,12 @@ func main() {
 			fmt.Println("Please pick a valid number of cores to use for the run.")
 			os.Exit(0)
 		}
-		chain := cophymaru.InitMCMC(*genArg, treeOutFile, logOutFile, *brPrior, *printFreqArg, *sampFreqArg, *threadArg, *workersArg, mult, weights)
+		chain := cophymaru.InitMCMC(*genArg, treeOutFile, logOutFile, *brPrior, *printFreqArg, *sampFreqArg, *threadArg, *workersArg, mult, weights, *analysisArg)
 		start := time.Now()
 		chain.Run(tree, fosSlice)
 		elapsed := time.Since(start)
 		fmt.Println("COMPLETED ", *genArg, "MCMC SIMULATIONS IN ", elapsed)
-	} else if *analysisArg == 1 {
+	} else if *analysisArg == "full" || *analysisArg == "brlen" {
 		traits, ntax, ntraits := cophymaru.ReadContinuous(*traitArg)
 		var tree *cophymaru.Node
 		if *startArg == "0" {
@@ -151,11 +151,10 @@ func main() {
 		for range tree.CONTRT {
 			weights = append(weights, 1.0)
 		}
-		chain := cophymaru.InitMCMC(*genArg, treeOutFile, logOutFile, *brPrior, *printFreqArg, *sampFreqArg, *threadArg, *workersArg, mult, weights)
+		chain := cophymaru.InitMCMC(*genArg, treeOutFile, logOutFile, *brPrior, *printFreqArg, *sampFreqArg, *threadArg, *workersArg, mult, weights, *analysisArg)
 		start := time.Now()
 		chain.FullRun(tree)
 		elapsed := time.Since(start)
 		fmt.Println("COMPLETED ", *genArg, "MCMC SIMULATIONS IN ", elapsed)
 	}
-
 }
