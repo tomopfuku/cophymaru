@@ -14,7 +14,7 @@ import (
 
 //ReadTree will parse a newick string into a node struct
 func ReadTree(ts string) (root *Node) {
-	rt := Node{nil, nil, "root", 0., 0., nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0}
+	rt := Node{nil, nil, "root", 0., 0., nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false}
 	x := 0
 	nc := string(ts[x : x+1])
 	start := true
@@ -30,7 +30,7 @@ func ReadTree(ts string) (root *Node) {
 				cn = &rt
 				start = false
 			} else {
-				nn := Node{cn, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0}
+				nn := Node{cn, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false}
 				cn.AddChild(&nn)
 				cn = &nn
 			}
@@ -75,7 +75,7 @@ func ReadTree(ts string) (root *Node) {
 			cn.LEN = b
 			x--
 		} else {
-			nn := Node{cn, nil, "", 0., 0., nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0}
+			nn := Node{cn, nil, "", 0., 0., nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, true, false}
 			cn.AddChild(&nn)
 			cn = &nn
 			var nm bytes.Buffer

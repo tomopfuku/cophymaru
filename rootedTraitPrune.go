@@ -30,14 +30,14 @@ func rootedSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 			c1 := n.CHLD[1]
 			curlike := float64(0.0)
 			var tempChar float64
-			curVar := c0.CONPRNLEN[site]*c0.RATE + c1.CONPRNLEN[site]*c1.RATE
+			curVar := (c0.CONPRNLEN[site] * c0.RATE) + (c1.CONPRNLEN[site] * c1.RATE)
 			contrast := c0.CONTRT[site] - c1.CONTRT[site]
 			curlike += ((-0.5) * ((log2pi) + (math.Log(curVar)) + (math.Pow(contrast, 2) / (curVar))))
-			tempChar = ((c0.CONPRNLEN[site] * c1.CONTRT[site]) + (c1.CONPRNLEN[site] * c0.CONTRT[site])) / (curVar)
+			tempChar = (((c0.CONPRNLEN[site] * c0.RATE) * c1.CONTRT[site]) + ((c1.CONPRNLEN[site] * c1.RATE) * c0.CONTRT[site])) / (curVar)
 			n.CONTRT[site] = tempChar
 			*nlikes += curlike
-			tempBranchLength := n.CONPRNLEN[site] + ((c0.CONPRNLEN[site] * c1.CONPRNLEN[site]) / (c0.CONPRNLEN[site] + c1.CONPRNLEN[site])) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
-			n.CONPRNLEN[site] = tempBranchLength                                                                                            // need to calculate the "prune length" by adding the length to the uncertainty
+			tempBranchLength := n.CONPRNLEN[site] + (((c0.CONPRNLEN[site] * c0.RATE) * (c1.CONPRNLEN[site] * c1.RATE)) / ((c0.RATE * c0.CONPRNLEN[site]) + (c1.RATE * c1.CONPRNLEN[site]))) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
+			n.CONPRNLEN[site] = tempBranchLength                                                                                                                                            // need to calculate the "prune length" by adding the length to the uncertainty
 			n.LL[site] = curlike
 			//n.MRK = true
 		}

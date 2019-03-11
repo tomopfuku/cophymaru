@@ -10,13 +10,48 @@ import (
 
 func PoissonTreeLoglike(nodels []*Node) float64 {
 	lam := 1.0
-	c := 10.0
+	c := 1.0
 	treelik := 0.0
 	for _, node := range nodels {
 		if node.NAME == "root" {
 			continue
 		}
 		tf := node.PAR.HEIGHT * c
+		tl := node.HEIGHT * c
+		brlik := 0.0
+		if node.FINDS > 1 {
+			f := node.FAD * c
+			l := node.LAD * c
+			a := math.Log(math.Pow(f-l, (node.FINDS - 2.0)))
+			b := math.Log(math.Pow(lam, node.FINDS))
+			c := -lam * (tf - tl)
+			brlik = (a + b + c) - float64(LogFactorial(int(node.FINDS-2.0)))
+		} else if node.FINDS == 1 {
+			brlik = math.Log(lam) + (-lam * (tf - tl))
+		} else if node.FINDS == 0 {
+			brlik = -lam * (tf - tl)
+		}
+		treelik += brlik
+	}
+	return treelik
+}
+
+func ADPoissonTreeLoglike(nodels []*Node) float64 {
+	lam := 1.0
+	c := 1.0
+	treelik := 0.0
+	for _, node := range nodels {
+		if node.NAME == "root" {
+			continue
+		} else if node.ANC == true && node.ISTIP == false { // will calc likelihood of ancestors on the corresponding tip
+			continue
+		}
+		var tf float64
+		if node.ANC == false {
+			tf = node.PAR.HEIGHT * c
+		} else if node.ANC == true && node.ISTIP == true {
+			tf = node.PAR.PAR.HEIGHT * c
+		}
 		tl := node.HEIGHT * c
 		brlik := 0.0
 		if node.FINDS > 1 {

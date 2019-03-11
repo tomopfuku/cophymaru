@@ -25,6 +25,36 @@ type Node struct {
 	HEIGHT    float64
 	FINDS     float64
 	RATE      float64
+	ISTIP     bool
+	ANC       bool
+}
+
+func (n *Node) GetSib() *Node {
+	if n.NAME == "root" {
+		fmt.Println("Root node has no sibling")
+		os.Exit(0)
+	}
+	par := n.PAR
+	var sib *Node
+	if len(par.CHLD) != 2 {
+		if len(par.CHLD) == 1 {
+			fmt.Println("Singleton encountered in tree")
+			os.Exit(0)
+		} else {
+			fmt.Println("Multifurcation found in tree")
+			os.Exit(0)
+		}
+	}
+	for _, c := range par.CHLD {
+		if c != n {
+			sib = c
+		}
+	}
+	if sib == nil {
+		fmt.Println("something is messed up with the tree. can't find a sister node for node", n)
+		os.Exit(0)
+	}
+	return sib
 }
 
 //PostorderArray will return an array of all the nodes in the tree in Postorder
@@ -63,6 +93,30 @@ func (n Node) Newick(bl bool) (ret string) {
 		buffer.WriteString(cn.Newick(bl))
 		if bl == true {
 			s := strconv.FormatFloat(cn.LEN, 'f', -1, 64)
+			buffer.WriteString(":")
+			buffer.WriteString(s)
+		}
+		if in == len(n.CHLD)-1 {
+			buffer.WriteString(")")
+		} else {
+			buffer.WriteString(",")
+		}
+	}
+	buffer.WriteString(n.NAME)
+	ret = buffer.String()
+	return
+}
+
+//Rateogram will return a newick string representation of the tree with rates as the branch lengths
+func (n Node) Rateogram(bl bool) (ret string) {
+	var buffer bytes.Buffer
+	for in, cn := range n.CHLD {
+		if in == 0 {
+			buffer.WriteString("(")
+		}
+		buffer.WriteString(cn.Rateogram(bl))
+		if bl == true {
+			s := strconv.FormatFloat(cn.RATE, 'f', -1, 64)
 			buffer.WriteString(":")
 			buffer.WriteString(s)
 		}

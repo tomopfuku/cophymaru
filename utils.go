@@ -80,12 +80,17 @@ func maxChildFAD(node *Node) float64 {
 }
 
 func AssignBranchRates(preTree []*Node, rates []float64) bool {
-	if len(preTree)-1 != len(rates) {
-		fmt.Println("You are trying to estimate a different number of rates than there are branches")
-		os.Exit(0)
-	}
-	for i, node := range preTree[1:] {
+	/*
+		if len(preTree)-1 != len(rates) {
+			fmt.Println("You are trying to estimate a different number of rates than there are branches")
+			os.Exit(0)
+		}
+	*/
+	i := 0
+	for _, node := range preTree[1:] {
 		if node.NAME == "root" {
+			continue
+		} else if node.ISTIP == true && node.ANC == true {
 			continue
 		} else {
 			rate := rates[i]
@@ -93,6 +98,7 @@ func AssignBranchRates(preTree []*Node, rates []float64) bool {
 				return true
 			}
 			node.RATE = rate
+			i++
 		}
 	}
 	return false
@@ -111,8 +117,9 @@ func AssignGlobalRate(preTree []*Node, rate float64) bool {
 func AssignInternalNodeHeights(preTree []*Node, heights []float64) bool {
 	count := 0
 	for _, node := range preTree {
-		if len(node.CHLD) != 0 {
+		if len(node.CHLD) != 0 && node.ANC == false {
 			node.HEIGHT = heights[count]
+			node.FAD = node.HEIGHT
 			constr := maxChildFAD(node)
 			if node.HEIGHT <= constr {
 				return true
@@ -121,7 +128,7 @@ func AssignInternalNodeHeights(preTree []*Node, heights []float64) bool {
 		}
 		if node.NAME != "root" {
 			node.LEN = node.PAR.HEIGHT - node.HEIGHT
-			if node.HEIGHT >= node.PAR.HEIGHT {
+			if node.HEIGHT > node.PAR.HEIGHT {
 				return true
 			}
 		}
@@ -130,4 +137,18 @@ func AssignInternalNodeHeights(preTree []*Node, heights []float64) bool {
 		}
 	}
 	return false
+}
+
+func NodeFromLabel(label string, nodes []*Node) *Node {
+	for _, node := range nodes {
+		if node.NAME == label {
+			return node
+		}
+	}
+	return nil
+}
+
+func AIC(lnl, k float64) (aic float64) {
+	aic = (2 * k) - (2 * lnl)
+	return
 }
