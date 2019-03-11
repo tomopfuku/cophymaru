@@ -11,6 +11,7 @@ To compile, clone this repository in your Golang src directory, cd into the repo
 You can then move the binaries into your path or run it from there. _cophymaru_ is fairly self-contained, and so there shouldn't be major issues with compiling. 
 
 Dependencies:
+
 Gonum -- https://github.com/gonum/gonum -- is used for the numerical optimization implementations.
 
 For help, type:
