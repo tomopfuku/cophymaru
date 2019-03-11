@@ -36,8 +36,8 @@ func PoissonTreeLoglike(nodels []*Node) float64 {
 	return treelik
 }
 
-func ADPoissonTreeLoglike(nodels []*Node) float64 {
-	lam := 1.0
+func ADPoissonTreeLoglike(nodels []*Node, lam float64) float64 {
+	//lam := 10.0
 	c := 1.0
 	treelik := 0.0
 	for _, node := range nodels {
@@ -145,19 +145,14 @@ func assignHeights(node *Node) {
 	for _, chld := range node.CHLD {
 		assignHeights(chld)
 	}
-	if node.NAME != "" && node.NAME != "root" {
+	if node.ISTIP {
 		if node.LAD == 0.0 {
 			node.HEIGHT = node.LAD
 		} else {
-			node.HEIGHT = node.LAD - 0.01
+			node.HEIGHT = node.LAD - 0.000001
 		}
 	} else {
-		oldestChildHeight := 0.0
-		for _, c := range node.CHLD {
-			if c.FAD > oldestChildHeight {
-				oldestChildHeight = c.FAD
-			}
-		}
+		oldestChildHeight := OldestChildAge(node)
 		node.HEIGHT = oldestChildHeight + 0.05
 		node.FAD = node.HEIGHT
 	}
@@ -174,4 +169,14 @@ func MakeStratHeights(tree *Node) {
 			node.LEN = node.PAR.HEIGHT - node.HEIGHT
 		}
 	}
+}
+
+func OldestChildAge(node *Node) float64 {
+	oldestChildHeight := 0.0
+	for _, c := range node.CHLD {
+		if c.FAD > oldestChildHeight {
+			oldestChildHeight = c.FAD
+		}
+	}
+	return oldestChildHeight
 }

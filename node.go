@@ -70,6 +70,23 @@ func (n *Node) PostorderArray() (ret []*Node) {
 	return
 }
 
+//PreorderTips will return a preorder array of all the tips in a tree
+func (n *Node) PreorderTips() (ret []*Node) {
+	var buffer []*Node
+	if n.ISTIP {
+		buffer = append(buffer, n)
+	}
+	for _, cn := range n.CHLD {
+		for _, cret := range cn.PreorderTips() {
+			if cret.ISTIP {
+				buffer = append(buffer, cret)
+			}
+		}
+	}
+	ret = buffer
+	return
+}
+
 //PreorderArray will return a preordered array of all the nodes in a tree
 func (n *Node) PreorderArray() (ret []*Node) {
 	var buffer []*Node

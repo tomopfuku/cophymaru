@@ -117,23 +117,26 @@ func AssignGlobalRate(preTree []*Node, rate float64) bool {
 func AssignInternalNodeHeights(preTree []*Node, heights []float64) bool {
 	count := 0
 	for _, node := range preTree {
-		if len(node.CHLD) != 0 && node.ANC == false {
-			node.HEIGHT = heights[count]
-			node.FAD = node.HEIGHT
-			constr := maxChildFAD(node)
-			if node.HEIGHT <= constr {
+		if node.ISTIP == false && node.ANC == false {
+			newheight := heights[count]
+			constr := OldestChildAge(node)
+			if newheight <= constr {
 				return true
 			}
+
+			node.HEIGHT = newheight
+			node.FAD = node.HEIGHT
 			count++
 		}
 		if node.NAME != "root" {
-			node.LEN = node.PAR.HEIGHT - node.HEIGHT
+			newlen := node.PAR.HEIGHT - node.HEIGHT
+			if newlen < 0.0 {
+				return true
+			}
+			node.LEN = newlen
 			if node.HEIGHT > node.PAR.HEIGHT {
 				return true
 			}
-		}
-		if node.LEN < 0.0 {
-			return true
 		}
 	}
 	return false
