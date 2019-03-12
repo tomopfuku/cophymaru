@@ -6,9 +6,39 @@ import (
 	"gonum.org/v1/gonum/optimize"
 )
 
-func OptimizeMorphStratHeights(tree *Node) (float64, float64, []float64) {
+func OptimizePreservationLam(tree *Node) (float64, float64) {
+	//lam := 1.0 //2.4
+	preNodes := tree.PreorderArray()
+	fcn := func(p []float64) float64 {
+		lam := p[0]
+		large := 100000000000.0
+		if lam <= 0.0 {
+			return large
+		}
+		stratLL := ADPoissonTreeLoglike(preNodes, lam)
+		lnl := stratLL
+		return -lnl
+	}
+	settings := optimize.Settings{} //DefaultSettings()
+	settings.MajorIterations = 10
+	settings.Concurrent = 0
+	settings.FuncEvaluations = 100
+	settings.GradientThreshold = 0.1
+	settings.Recorder = nil
+	p := optimize.Problem{Func: fcn, Grad: nil, Hess: nil}
+	p0 := []float64{1.0}
+	meth := &optimize.NelderMead{}
+	res, err := optimize.Minimize(p, p0, nil, meth)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return -res.F, res.X[0]
+
+}
+
+func OptimizeMorphStratHeights(tree *Node, lam float64) (float64, float64, []float64) {
+	//lam := 1.0 //2.4
 	fcn := func(heights []float64) float64 {
-		lam := 2.4
 		large := 100000000000.0
 		for _, i := range heights {
 			if i <= 0.0 {
@@ -46,7 +76,7 @@ func OptimizeMorphStratHeights(tree *Node) (float64, float64, []float64) {
 	}
 	AssignInternalNodeHeights(preNodes, res.X)
 	var retparams []float64
-	retparams = append(retparams, 1.0)
+	retparams = append(retparams, lam)
 	for _, bl := range res.X {
 		retparams = append(retparams, bl)
 	}
@@ -99,11 +129,10 @@ func OptimizeLamMorphStratHeights(tree *Node) (float64, float64, []float64) {
 
 }
 
-func OptimizeGlobalRateHeights(tree *Node) (float64, []float64) {
+func OptimizeGlobalRateHeights(tree *Node, lam float64) (float64, []float64) {
 	fcn := func(params []float64) float64 {
 		rate := params[0]
-		lam := params[1]
-		heights := params[2:]
+		heights := params[1:]
 		large := 100000000000.0
 		for _, i := range heights {
 			if i <= 0.0 {
@@ -136,7 +165,6 @@ func OptimizeGlobalRateHeights(tree *Node) (float64, []float64) {
 	p := optimize.Problem{Func: fcn, Grad: nil, Hess: nil}
 	var p0 []float64
 	p0 = append(p0, 0.5)
-	p0 = append(p0, 1.0)
 	preNodes := tree.PreorderArray()
 	for _, n := range preNodes {
 		if len(n.CHLD) > 0 && n.ANC == false {
@@ -149,7 +177,7 @@ func OptimizeGlobalRateHeights(tree *Node) (float64, []float64) {
 		fmt.Println(err)
 	}
 	AssignGlobalRate(preNodes, res.X[0])
-	AssignInternalNodeHeights(preNodes, res.X[2:])
+	AssignInternalNodeHeights(preNodes, res.X[1:])
 	return -res.F, res.X
 }
 
@@ -158,7 +186,7 @@ func OptimizeBranchRates(tree *Node) (float64, float64, []float64) {
 		preNodes := tree.PreorderArray()
 		large := 100000000000.0
 		for _, i := range rates {
-			if i <= 0.0 {
+			if i < 0.0 {
 				return large
 			}
 		}
@@ -194,5 +222,42 @@ func OptimizeBranchRates(tree *Node) (float64, float64, []float64) {
 		fmt.Println(err)
 	}
 	AssignBranchRates(preNodes, res.X)
+	return -res.F, float64(len(res.X)), res.X
+}
+
+func OptimizeLocalRatesAD(anc *Node) (float64, float64, []float64) {
+	sib := anc.GetSib()
+	par := anc.PAR
+	fcn := func(rates []float64) float64 {
+		large := 100000000000.0
+		for _, i := range rates {
+			if i < 0.0 {
+				return large
+			}
+		}
+		par.RATE = rates[0]
+		anc.RATE = rates[1]
+		morphLL := RootedLogLikeParallel(par.PAR, true, 4)
+		//stratLL := PoissonTreeLoglike(preNodes)
+		lnl := morphLL //+ stratLL
+		return -lnl
+	}
+	settings := optimize.Settings{} //DefaultSettings()
+	settings.MajorIterations = 10
+	settings.Concurrent = 0
+	settings.FuncEvaluations = 100
+	settings.GradientThreshold = 0.1
+	settings.Recorder = nil
+	p := optimize.Problem{Func: fcn, Grad: nil, Hess: nil}
+	var p0 []float64
+	p0 = append(p0, par.RATE)
+	p0 = append(p0, sib.RATE)
+	meth := &optimize.NelderMead{}
+	res, err := optimize.Minimize(p, p0, nil, meth)
+	if err != nil {
+		fmt.Println(err)
+	}
+	par.RATE = res.X[0]
+	sib.RATE = res.X[1]
 	return -res.F, float64(len(res.X)), res.X
 }

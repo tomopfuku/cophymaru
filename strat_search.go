@@ -7,19 +7,19 @@ import (
 )
 
 func ADStratTreeSearch(tree *Node) {
-	curbest := checkAllAD(tree)
+	curbest := checkAllADLL(tree)
 	fmt.Println(curbest, tree.Newick(true))
 	fmt.Println(tree.Rateogram(true))
 }
 
 func checkAllAD(tree *Node) (bestAIC float64) {
 	var morphlnl, stratlnl, morphK, stratK, comblnl float64
-	var strat_res []float64
 	for _, node := range tree.PreorderArray() {
 		node.RATE = rand.Float64() //0.9
 	}
 	morphlnl, morphK, _ = OptimizeBranchRates(tree)
-	comblnl, stratK, strat_res = OptimizeMorphStratHeights(tree)
+	_, lam := OptimizePreservationLam(tree)
+	comblnl, stratK, _ = OptimizeMorphStratHeights(tree, lam)
 	morphlnl, morphK, _ = OptimizeBranchRates(tree)
 	fmt.Println(tree.Newick(true))
 	K := morphK + stratK
@@ -29,83 +29,130 @@ func checkAllAD(tree *Node) (bestAIC float64) {
 	bestAIC = AIC(lnl, K)
 	curAIC := AIC(lnl, K)
 	bifAIC := AIC(lnl, K)
-	fmt.Println(RootedLogLikeParallel(tree, true, 4), curAIC)
-	stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
+	stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), lam)
+	fmt.Println(RootedLogLikeParallel(tree, true, 4), stratlnl, comblnl, curAIC, lam)
 	anclikes := make(map[string]float64)
 	for _, n := range testNodes {
 		bad := MakeAncestor(n)
 		if bad {
 			continue
 		}
-		morphlnl, morphK, _ = OptimizeBranchRates(tree)
+		morphlnl, _, _ = OptimizeBranchRates(tree)
+		//morphlnl, _, _ = OptimizeLocalRatesAD(n)
+		morphlnl = RootedLogLikeParallel(tree, true, 4)
+
 		//stratlnl, stratK = OptimizeMorphStratHeights(tree)
-		stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
-		K = morphK + stratK
+		stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), lam)
+		K = (morphK - 1) + stratK
 		lnl = morphlnl + stratlnl
 		curAIC = AIC(lnl, K)
-		anclikes[n.NAME] = curAIC
-		//fmt.Println(n.NAME, RootedLogLikeParallel(tree, true, 4), morphlnl, stratlnl, lnl, curAIC, bestAIC, math.Exp((curAIC-bestAIC)/2))
-		if (curAIC + 0.5) < bestAIC {
+		//fmt.Println(n.NAME, RootedLogLikeParallel(tree, true, 4), morphlnl, stratlnl, lnl, curAIC, bestAIC)
+		aicW := 0.0
+		if curAIC < bifAIC {
+			rellike := math.Exp((bifAIC - curAIC) / 2.0)
+			//bifrellike := math.Exp((bifAIC - bifAIC) / 2.0)
+			sum := rellike + 1.0 //bifrellike
+			aicW = rellike / sum
+		}
+		fmt.Println(n.NAME, morphlnl, stratlnl, curAIC, bifAIC, aicW)
+		if (curAIC) < bestAIC {
 			bestAIC = curAIC
+			anclikes[n.NAME] = curAIC
 			UnmakeAncestor(n)
 		} else {
 			UnmakeAncestor(n)
 		}
 	}
-	rellikes := make(map[string]float64)
-	sum := 0.0
-	for k, _ := range anclikes {
-		_ = MakeAncestorLabel(k, tree.PreorderArray())
-		morphlnl, morphK, _ = OptimizeBranchRates(tree)
-		//stratlnl, stratK = OptimizeMorphStratHeights(tree)
-		stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
-		K = morphK + stratK
-		lnl = morphlnl + stratlnl
-		curAIC = AIC(lnl, K)
-		rellike := math.Exp((bifAIC - curAIC) / 2.0)
-		rellikes[k] = rellike
-		sum += rellike
-		UnmakeAncestorLabel(k, tree.PreorderArray())
-		fmt.Println(k, curAIC, bifAIC, math.Exp((bifAIC-curAIC)/2.0))
+	for _, n := range testNodes {
+		UnmakeAncestor(n)
 	}
-	for k, v := range rellikes {
-		fmt.Println(k, v/sum)
-	}
+
+	/*
+		rellikes := make(map[string]float64)
+		sum := 0.0
+		for k, _ := range anclikes {
+			_ = MakeAncestorLabel(k, tree.PreorderArray())
+			morphlnl, morphK, _ = OptimizeBranchRates(tree)
+			//stratlnl, stratK = OptimizeMorphStratHeights(tree)
+			stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
+			K = morphK + stratK
+			lnl = morphlnl + stratlnl
+			curAIC = AIC(lnl, K)
+			//curAIC = v
+			rellike := math.Exp((bestAIC - curAIC) / 2.0)
+
+			rellikes[k] = rellike
+			sum += rellike
+			//if rellike > 2000000 {
+			UnmakeAncestorLabel(k, tree.PreorderArray())
+			//	}
+			fmt.Println(k, curAIC, bifAIC, bestAIC, lnl, rellike)
+		}
+		for k, v := range rellikes {
+			aicW := (v / sum) * 100
+			fmt.Println(k, aicW)
+			if aicW > 5.0 {
+				MakeAncestorLabel(k, tree.PreorderArray())
+			}
+		}
+	*/
 	return
 }
 
 func checkAllADLL(tree *Node) (bestLL float64) {
 	var morphlnl, stratlnl, comblnl float64
-	var strat_res []float64
 	for _, node := range tree.PreorderArray() {
 		node.RATE = rand.Float64() //0.9
 	}
-	morphlnl, _, _ = OptimizeBranchRates(tree)
-	comblnl, _, strat_res = OptimizeMorphStratHeights(tree)
-	morphlnl, _, _ = OptimizeBranchRates(tree)
+	_, lam := OptimizePreservationLam(tree)
+	fmt.Println(lam)
+	morphlnl, _ = OptimizeGlobalRateHeights(tree, lam)
+	comblnl, _, _ = OptimizeMorphStratHeights(tree, lam)
+	morphlnl = RootedLogLikeParallel(tree, true, 4)
+	//morphlnl, _, _ = OptimizeBranchRates(tree)
 	fmt.Println(tree.Newick(true))
 	lnl := comblnl //morphlnl + stratlnl
 	tips := tree.PreorderTips()
 	testNodes := candidateAncestors(tips)
 	bestLL = lnl
 	curLL := lnl
-	fmt.Println(RootedLogLikeParallel(tree, true, 4), curLL)
-	stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
+	bifLL := lnl
+	bifMorphLL := morphlnl
+	//fmt.Println(RootedLogLikeParallel(tree, true, 4), curLL)
+	nodes := tree.PreorderArray()
+	stratlnl = ADPoissonTreeLoglike(nodes, lam)
+	var rellike float64
+	ancsupport := make(map[string]float64)
 	for _, n := range testNodes {
 		bad := MakeAncestor(n)
 		if bad {
 			continue
 		}
-		morphlnl, _, _ = OptimizeBranchRates(tree)
+		//for _, node := range tree.PreorderArray() {
+		//	node.RATE = rand.Float64() //0.9
+		//}
+		//morphlnl, _, _ = OptimizeBranchRates(tree)
+		//morphlnl, _, _ = OptimizeLocalRatesAD(n)
+		morphlnl = RootedLogLikeParallel(tree, true, 4)
 		//stratlnl, stratK = OptimizeMorphStratHeights(tree)
-		stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
+		stratlnl = ADPoissonTreeLoglike(nodes, lam)
 		lnl = morphlnl + stratlnl
 		curLL = lnl
-		fmt.Println(n.NAME, morphlnl, stratlnl, lnl, curLL, bestLL, math.Exp((-curLL-(-bestLL))/2))
-		if curLL-0.5 > bestLL {
+		//rellike = math.Exp(curLL) / (math.Exp(curLL) + math.Exp(bifLL))
+		rellike = math.Exp(curLL - (curLL + math.Log1p(math.Exp(bifLL-curLL))))
+		morphrellike := math.Exp(morphlnl - (morphlnl + math.Log1p(math.Exp(bifMorphLL-morphlnl))))
+		ancsupport[n.NAME] = rellike
+		fmt.Println(n.NAME, rellike, morphlnl, bifMorphLL, morphrellike)
+		if curLL > bestLL {
 			bestLL = curLL
+			UnmakeAncestor(n)
 		} else {
 			UnmakeAncestor(n)
+		}
+	}
+	for k, v := range ancsupport {
+		if v > 0.7 {
+			MakeAncestorLabel(k, nodes)
 		}
 	}
 	return
