@@ -32,9 +32,10 @@ func MakeAncestor(node *Node) bool {
 	return false
 }
 
-func MakeAncestorLabel(label string, nodes []*Node) {
+func MakeAncestorLabel(label string, nodes []*Node) bool {
 	n := NodeFromLabel(label, nodes)
-	MakeAncestor(n)
+	bad := MakeAncestor(n)
+	return bad
 }
 
 func UnmakeAncestorLabel(label string, nodes []*Node) {

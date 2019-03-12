@@ -8,7 +8,7 @@ import (
 
 func OptimizeMorphStratHeights(tree *Node) (float64, float64, []float64) {
 	fcn := func(heights []float64) float64 {
-		lam := 1.0
+		lam := 2.4
 		large := 100000000000.0
 		for _, i := range heights {
 			if i <= 0.0 {

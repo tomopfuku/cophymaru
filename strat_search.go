@@ -7,7 +7,7 @@ import (
 )
 
 func ADStratTreeSearch(tree *Node) {
-	curbest := checkAllADLL(tree)
+	curbest := checkAllAD(tree)
 	fmt.Println(curbest, tree.Newick(true))
 	fmt.Println(tree.Rateogram(true))
 }
@@ -28,8 +28,10 @@ func checkAllAD(tree *Node) (bestAIC float64) {
 	testNodes := candidateAncestors(tips)
 	bestAIC = AIC(lnl, K)
 	curAIC := AIC(lnl, K)
+	bifAIC := AIC(lnl, K)
 	fmt.Println(RootedLogLikeParallel(tree, true, 4), curAIC)
 	stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
+	anclikes := make(map[string]float64)
 	for _, n := range testNodes {
 		bad := MakeAncestor(n)
 		if bad {
@@ -41,12 +43,33 @@ func checkAllAD(tree *Node) (bestAIC float64) {
 		K = morphK + stratK
 		lnl = morphlnl + stratlnl
 		curAIC = AIC(lnl, K)
-		fmt.Println(n.NAME, RootedLogLikeParallel(tree, true, 4), morphlnl, stratlnl, lnl, curAIC, bestAIC)
+		anclikes[n.NAME] = curAIC
+		//fmt.Println(n.NAME, RootedLogLikeParallel(tree, true, 4), morphlnl, stratlnl, lnl, curAIC, bestAIC, math.Exp((curAIC-bestAIC)/2))
 		if (curAIC + 0.5) < bestAIC {
 			bestAIC = curAIC
+			UnmakeAncestor(n)
 		} else {
 			UnmakeAncestor(n)
 		}
+	}
+	rellikes := make(map[string]float64)
+	sum := 0.0
+	for k, _ := range anclikes {
+		_ = MakeAncestorLabel(k, tree.PreorderArray())
+		morphlnl, morphK, _ = OptimizeBranchRates(tree)
+		//stratlnl, stratK = OptimizeMorphStratHeights(tree)
+		stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
+		K = morphK + stratK
+		lnl = morphlnl + stratlnl
+		curAIC = AIC(lnl, K)
+		rellike := math.Exp((bifAIC - curAIC) / 2.0)
+		rellikes[k] = rellike
+		sum += rellike
+		UnmakeAncestorLabel(k, tree.PreorderArray())
+		fmt.Println(k, curAIC, bifAIC, math.Exp((bifAIC-curAIC)/2.0))
+	}
+	for k, v := range rellikes {
+		fmt.Println(k, v/sum)
 	}
 	return
 }
@@ -78,7 +101,7 @@ func checkAllADLL(tree *Node) (bestLL float64) {
 		stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), strat_res[0])
 		lnl = morphlnl + stratlnl
 		curLL = lnl
-		fmt.Println(n.NAME, morphlnl, stratlnl, lnl, curLL, bestLL, math.Exp((curLL-bestLL)/2))
+		fmt.Println(n.NAME, morphlnl, stratlnl, lnl, curLL, bestLL, math.Exp((-curLL-(-bestLL))/2))
 		if curLL-0.5 > bestLL {
 			bestLL = curLL
 		} else {
