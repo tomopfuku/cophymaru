@@ -8,6 +8,11 @@ func MakeAncestorSameRate(node *Node) bool {
 	if node.FAD < sib.FAD && sib.ISTIP == true {
 		return true
 	}
+	lensum := node.LEN + node.PAR.LEN
+	nprop := node.LEN / lensum
+	descprop := node.PAR.LEN / lensum
+	node.PAR.RATE = (node.RATE * nprop) + (node.PAR.RATE * descprop)
+
 	adj := node.PAR.HEIGHT - sib.FAD       //constr
 	node.PAR.LEN += adj                    //sib.FAD //sib.LEN
 	sib.LEN -= adj                         //node.PAR.HEIGHT - sib.FAD
@@ -19,8 +24,8 @@ func MakeAncestorSameRate(node *Node) bool {
 	if sib.ISTIP == false && sib.ANC == false {
 		sib.FAD = sib.HEIGHT
 	}
-	node.PAR.RATE += node.RATE
-	sib.RATE += node.RATE
+
+	//sib.RATE += node.RATE
 	node.RATE = 0.0
 	node.PAR.FAD = node.FAD
 	node.LEN -= adj

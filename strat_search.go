@@ -131,7 +131,7 @@ func checkAllADLL(tree *Node) (bestLL float64) {
 		//for _, node := range tree.PreorderArray() {
 		//	node.RATE = rand.Float64() //0.9
 		//}
-		//morphlnl, _, _ = OptimizeBranchRates(tree)
+		morphlnl, _, _ = OptimizeBranchRates(tree)
 		//morphlnl, _, _ = OptimizeLocalRatesAD(n)
 		morphlnl = RootedLogLikeParallel(tree, true, 4)
 		//stratlnl, stratK = OptimizeMorphStratHeights(tree)
