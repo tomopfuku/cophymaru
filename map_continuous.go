@@ -93,7 +93,9 @@ func MapContinuous(t *Node, traits map[string][]float64, ntraits int) {
 			t.LL = append(t.LL, z)
 			count++
 		}
+		t.CONPRNLEN = make([]float64, len(t.CONTRT))
 	}
+	t.CONPRNLEN = make([]float64, len(t.CONTRT))
 	for _, chld := range t.CHLD {
 		MapContinuous(chld, traits, ntraits)
 	}

@@ -9,7 +9,7 @@ import (
 func ADStratTreeSearch(tree *Node) {
 	curbest := checkAllADLL(tree)
 	fmt.Println(curbest, tree.Newick(true))
-	fmt.Println(tree.Rateogram(true))
+	fmt.Println(tree.Rateogram())
 }
 
 func checkAllAD(tree *Node) (bestAIC float64) {

@@ -103,7 +103,7 @@ func rootedMissingSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 func rootedTreeLike(tree *Node, startFresh bool, jobs <-chan int, results chan<- float64) {
 	for site := range jobs {
 		tmpll := 0.
-		rootedMissingSiteLL(tree, &tmpll, startFresh, site)
+		rootedSiteLL(tree, &tmpll, startFresh, site)
 		tmpll = tree.LL[site]
 		results <- tmpll
 	}

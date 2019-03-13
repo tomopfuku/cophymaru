@@ -27,6 +27,10 @@ type Node struct {
 	RATE      float64
 	ISTIP     bool
 	ANC       bool
+	LSLEN     float64
+	LSPRNLEN  float64
+	OUTGRP    bool
+	DIRDESC   bool
 }
 
 func (n *Node) GetSib() *Node {
@@ -55,6 +59,121 @@ func (n *Node) GetSib() *Node {
 		os.Exit(0)
 	}
 	return sib
+}
+
+//Root will root an unrooted tritomy tree in place
+func (n *Node) Root(rootsublen float64) {
+	if len(n.CHLD) == 2 {
+		fmt.Println("cannot root already rooted tree")
+	}
+	nn := &Node{n, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, 0.0, 0.0, false, false}
+	nn.CONPRNLEN = make([]float64, len(n.CONTRT))
+	nn.CONTRT = make([]float64, len(n.CONTRT))
+	nn.LL = make([]float64, len(n.CONTRT))
+	for range nn.LL {
+		nn.MIS = append(nn.MIS, false)
+	}
+	var ignodes, ognodes []*Node
+	for _, c := range n.CHLD {
+		if c.OUTGRP == true {
+			ognodes = append(ognodes, c)
+		} else {
+			ignodes = append(ignodes, c)
+		}
+	}
+	if len(ognodes) == 1 {
+		n.AddChild(nn)
+		n.RemoveChild(ignodes[0])
+		n.RemoveChild(ignodes[1])
+		nn.AddChild(ignodes[0])
+		nn.AddChild(ignodes[1])
+		//nn.LEN = ognodes[0].LEN / 2.0
+		nn.LEN = rootsublen
+		ognodes[0].LEN = ognodes[0].LEN - rootsublen //nn.LEN
+		nn.LSLEN = ognodes[0].LSLEN / 2.0
+		ognodes[0].LSLEN = nn.LSLEN
+	} else if len(ognodes) == 2 {
+		n.AddChild(nn)
+		n.RemoveChild(ognodes[0])
+		n.RemoveChild(ognodes[1])
+		nn.AddChild(ognodes[0])
+		nn.AddChild(ognodes[1])
+		nn.LEN = rootsublen
+		ignodes[0].LEN = ignodes[0].LEN - rootsublen //nn.LEN
+		nn.LSLEN = ignodes[0].LSLEN / 2.0
+		ignodes[0].LSLEN = nn.LSLEN
+
+	} else {
+		fmt.Println("there was a problem rooting the tree")
+		os.Exit(0)
+	}
+}
+
+func (n *Node) Unroot() (rootlen float64) {
+	if len(n.CHLD) != 2 {
+		fmt.Println("cannot unroot already unrooted tree")
+		os.Exit(0)
+	}
+	var igPar, ogPar *Node
+	for _, c := range n.CHLD {
+		if c.OUTGRP == true {
+			ogPar = c
+		} else {
+			igPar = c
+		}
+	}
+	if len(ogPar.CHLD) > 0 {
+		rootlen = ogPar.LEN
+		igPar.LEN += ogPar.LEN
+		igPar.LSLEN += ogPar.LSLEN
+		for _, cc := range ogPar.CHLD {
+			ogPar.RemoveChild(cc)
+			n.AddChild(cc)
+			n.RemoveChild(ogPar)
+		}
+	} else {
+		rootlen = igPar.LEN
+		ogPar.LEN += igPar.LEN
+		ogPar.LSLEN += igPar.LSLEN
+		for _, cc := range igPar.CHLD {
+			igPar.RemoveChild(cc)
+			n.AddChild(cc)
+			n.RemoveChild(igPar)
+		}
+	}
+	return
+}
+
+func (n *Node) SetOutgroup(outgroup []string) {
+	if n.PAR != nil {
+		fmt.Println("can't set outgroup from node that isn't the root")
+	}
+	tipdic := make(map[string]bool)
+	for _, n := range n.PreorderTips() {
+		tipdic[n.NAME] = true
+	}
+	outdic := make(map[string]bool)
+	for _, tax := range outgroup {
+		outdic[tax] = true
+		if _, ok := tipdic[tax]; !ok {
+			fmt.Println("one of the taxa named in the outgroup is not in the tree. please fix.")
+			os.Exit(0)
+		}
+	}
+	var ogPars []*Node
+	for _, c := range n.CHLD {
+		for _, cc := range c.PreorderTips() {
+			if _, ok := outdic[cc.NAME]; ok {
+				ogPars = append(ogPars, c)
+			}
+		}
+	}
+	for _, ogPar := range ogPars {
+		ogPar.OUTGRP = true
+		for _, n := range ogPar.PreorderArray() {
+			n.OUTGRP = true
+		}
+	}
 }
 
 //PostorderArray will return an array of all the nodes in the tree in Postorder
@@ -124,19 +243,17 @@ func (n Node) Newick(bl bool) (ret string) {
 	return
 }
 
-//Rateogram will return a newick string representation of the tree with rates as the branch lengths
-func (n Node) Rateogram(bl bool) (ret string) {
+//Phylogram will return a newick string representation of the tree with least squares estimates as the branch lengths
+func (n Node) Phylogram() (ret string) {
 	var buffer bytes.Buffer
 	for in, cn := range n.CHLD {
 		if in == 0 {
 			buffer.WriteString("(")
 		}
-		buffer.WriteString(cn.Rateogram(bl))
-		if bl == true {
-			s := strconv.FormatFloat(cn.RATE, 'f', -1, 64)
-			buffer.WriteString(":")
-			buffer.WriteString(s)
-		}
+		buffer.WriteString(cn.Phylogram())
+		s := strconv.FormatFloat(cn.LSLEN, 'f', -1, 64)
+		buffer.WriteString(":")
+		buffer.WriteString(s)
 		if in == len(n.CHLD)-1 {
 			buffer.WriteString(")")
 		} else {
@@ -146,6 +263,46 @@ func (n Node) Rateogram(bl bool) (ret string) {
 	buffer.WriteString(n.NAME)
 	ret = buffer.String()
 	return
+}
+
+//Rateogram will return a newick string representation of the tree with rates as the branch lengths
+func (n Node) Rateogram() (ret string) {
+	var buffer bytes.Buffer
+	for in, cn := range n.CHLD {
+		if in == 0 {
+			buffer.WriteString("(")
+		}
+		buffer.WriteString(cn.Rateogram())
+		s := strconv.FormatFloat(cn.RATE, 'f', -1, 64)
+		buffer.WriteString(":")
+		buffer.WriteString(s)
+		if in == len(n.CHLD)-1 {
+			buffer.WriteString(")")
+		} else {
+			buffer.WriteString(",")
+		}
+	}
+	buffer.WriteString(n.NAME)
+	ret = buffer.String()
+	return
+}
+
+//CalcBranchRates plugs in branch-specific rates using the disparity length / time length
+func (n *Node) CalcBranchRates() {
+	for _, nn := range n.PreorderArray() {
+		if nn == n {
+			continue
+		}
+		if nn.LSLEN != 0.0 && nn.LEN != 0.0 {
+			nn.RATE = nn.LSLEN / nn.LEN
+			fmt.Println(nn.NAME, nn.LSLEN, nn.LEN, nn.RATE)
+
+		} else if nn.LSLEN == 0.0 {
+			nn.RATE = 0.0
+		} else if nn.LEN == 0.0 {
+			nn.RATE = nn.LSLEN / 0.01
+		}
+	}
 }
 
 //AddChild will add a child to a node
@@ -179,6 +336,40 @@ func (n *Node) NNodes(count *int) {
 	for _, ch := range n.CHLD {
 		ch.NNodes(count)
 	}
+}
+
+//RerootLS reroots all the nodes represented in a graph on n
+func (n *Node) RerootLS(oldroot *Node) *Node {
+	if n == oldroot {
+		fmt.Println("you are trying to reroot on the current root!")
+	}
+	nnodes := 0
+	oldroot.NNodes(&nnodes)
+	var pathnodes = make([]*Node, nnodes)
+	//var pathnodes []*Node
+	curnode := n
+	pathlen := 0 //this will count the number of nodes between the newroot and the oldroot
+	for ind := range pathnodes {
+		pathnodes[ind] = curnode
+		//pathnodes = append(pathnodes,curnode)
+		if curnode == oldroot {
+			break
+		}
+		pathlen++
+		curnode = curnode.PAR
+	}
+	var newpar *Node
+	for i := pathlen; i >= 1; i-- {
+		newpar = pathnodes[i-1]
+		curnode = pathnodes[i]
+		curnode.RemoveChild(newpar)
+		newpar.AddChild(curnode)
+		curnode.LSLEN = newpar.LSLEN
+	}
+	//curnode = nil
+	//newpar = nil
+	n.LSLEN = 0.0
+	return n
 }
 
 //Reroot reroots all the nodes represented in a graph on n

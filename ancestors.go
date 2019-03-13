@@ -44,6 +44,7 @@ func MakeAncestor(node *Node) bool {
 		return true
 	}
 	sib := node.GetSib()
+	sib.DIRDESC = true
 	if node.FAD < sib.FAD && sib.ISTIP == true {
 		return true
 	}
@@ -100,6 +101,7 @@ func UnmakeAncestor(node *Node) bool {
 	node.LEN += sublen //+ 0.000001
 	node.ANC = false
 	node.PAR.ANC = false
+	sib.DIRDESC = false
 	node.PAR.NAME = ""
 	return false
 }

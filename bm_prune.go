@@ -37,6 +37,51 @@ func BMPruneRooted(n *Node) {
 	}
 }
 
+//AncBMPruneRooted will prune BM branch lens and PICs down to a rooted node
+//root node should be a real (ie. bifurcating) root
+func AncBMPruneRooted(n *Node) {
+	for _, chld := range n.CHLD {
+		AncBMPruneRooted(chld)
+	}
+	n.LSPRNLEN = n.LSLEN
+	nchld := len(n.CHLD)
+	if nchld != 0 { //&& n.MRK == false {
+		var tempChar float64
+		if nchld != 2 {
+			fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
+		}
+		c0 := n.CHLD[0]
+		c1 := n.CHLD[1]
+		bot := ((1.0 / c0.LSPRNLEN) + (1.0 / c1.LSPRNLEN))
+		n.LSPRNLEN += 1.0 / bot
+		for i := range n.CHLD[0].CONTRT {
+			tempChar = (((1 / c0.LSPRNLEN) * c1.CONTRT[i]) + ((1 / c1.LSPRNLEN) * c0.CONTRT[i])) / bot
+			n.CONTRT[i] = tempChar
+		}
+	}
+}
+
+//AncBMPruneRootedSingle will prune BM branch lens and calculate PIC of a single trait down to a rooted node
+//root node should be a real (ie. bifurcating) root
+func AncBMPruneRootedSingle(n *Node, i int) {
+	for _, chld := range n.CHLD {
+		AncBMPruneRootedSingle(chld, i)
+	}
+	n.LSPRNLEN = n.LSLEN
+	nchld := len(n.CHLD)
+	if nchld != 0 { //&& n.MRK == false {
+		if nchld != 2 {
+			fmt.Println("This BM pruning algorithm should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
+		}
+		c0 := n.CHLD[0]
+		c1 := n.CHLD[1]
+		bot := ((1.0 / c0.LSPRNLEN) + (1.0 / c1.LSPRNLEN))
+		n.LSPRNLEN += 1.0 / bot
+		tempCharacter := (((1 / c0.LSPRNLEN) * c1.CONTRT[i]) + ((1 / c1.LSPRNLEN) * c0.CONTRT[i])) / bot
+		n.CONTRT[i] = tempCharacter
+	}
+}
+
 //BMPruneRootedSingle will prune BM branch lens and calculate PIC of a single trait down to a rooted node
 //root node should be a real (ie. bifurcating) root
 func BMPruneRootedSingle(n *Node, i int) {
@@ -85,6 +130,22 @@ func IterateBMLengths(tree *Node, niter int) {
 	}
 }
 
+//AncMissingTraitsEM will iteratively calculate the ML branch lengths for a particular topology
+func AncMissingTraitsEM(tree *Node, niter int) {
+	AssertUnrootedTree(tree)
+	nodes := tree.PreorderArray()
+	InitMissingValues(nodes)
+	itercnt := 0
+	for {
+		AncCalcExpectedTraits(tree) //calculate Expected trait values
+		ancCalcBMLengths(tree)      //maximize likelihood of branch lengths
+		itercnt++
+		if itercnt == niter {
+			break
+		}
+	}
+}
+
 //MissingTraitsEM will iteratively calculate the ML branch lengths for a particular topology
 func MissingTraitsEM(tree *Node, niter int) {
 	AssertUnrootedTree(tree)
@@ -101,6 +162,26 @@ func MissingTraitsEM(tree *Node, niter int) {
 	}
 }
 
+//ancCalcBMLengths will perform a single pass of the branch length ML estimation
+func ancCalcBMLengths(tree *Node) {
+	rnodes := tree.PreorderArray()
+	lnode := 0
+	for ind, newroot := range rnodes {
+		if len(newroot.CHLD) == 0 {
+			continue
+		} else if newroot != rnodes[0] {
+			tree = newroot.RerootLS(rnodes[lnode])
+			lnode = ind
+		}
+		for _, cn := range tree.CHLD {
+			AncBMPruneRooted(cn)
+		}
+		AncTritomyML(tree)
+	}
+	tree = rnodes[0].RerootLS(tree)
+	//fmt.Println(tree.Newick(true))
+}
+
 //calcBMLengths will perform a single pass of the branch length ML estimation
 func calcBMLengths(tree *Node) {
 	rnodes := tree.PreorderArray()
@@ -113,7 +194,7 @@ func calcBMLengths(tree *Node) {
 			lnode = ind
 		}
 		for _, cn := range tree.CHLD {
-			BMPruneRooted(cn)
+			AncBMPruneRooted(cn)
 		}
 		TritomyML(tree)
 	}
@@ -538,4 +619,80 @@ func TritomyML(tree *Node) {
 	tree.CHLD[0].LEN = sumV1
 	tree.CHLD[1].LEN = sumV2
 	tree.CHLD[2].LEN = sumV3
+}
+
+//AncTritomyML will calculate the MLEs for the branch lengths of a tifurcating 3-taxon tree assuming that direct ancestors may be in the tree
+func AncTritomyML(tree *Node) {
+	ntraits := len(tree.CHLD[0].CONTRT)
+	fntraits := float64(ntraits)
+	var x1, x2, x3 float64
+	sumV1 := 0.0
+	sumV2 := 0.0
+	sumV3 := 0.0
+	for i := range tree.CHLD[0].CONTRT {
+		x1 = tree.CHLD[0].CONTRT[i]
+		x2 = tree.CHLD[1].CONTRT[i]
+		x3 = tree.CHLD[2].CONTRT[i]
+		sumV1 += ((x1 - x2) * (x1 - x3))
+		sumV2 += ((x2 - x1) * (x2 - x3))
+		sumV3 += ((x3 - x1) * (x3 - x2))
+	}
+	if sumV1 < 0.0 || tree.CHLD[0].ANC == true && tree.CHLD[0].ISTIP == true {
+		sumV1 = 0.0000000000001
+		sumV2 = 0.0
+		sumV3 = 0.0
+		for i := range tree.CHLD[0].CONTRT {
+			x1 = tree.CHLD[0].CONTRT[i]
+			x2 = tree.CHLD[1].CONTRT[i]
+			x3 = tree.CHLD[2].CONTRT[i]
+			sumV2 += (x1 - x2) * (x1 - x2)
+			sumV3 += (x1 - x3) * (x1 - x3)
+		}
+	} else if sumV2 < 0.0 || tree.CHLD[1].ANC == true && tree.CHLD[1].ISTIP == true {
+		sumV1 = 0.0
+		sumV2 = 0.0000000000001 //0.0
+		sumV3 = 0.0
+		for i := range tree.CHLD[0].CONTRT {
+			x1 = tree.CHLD[0].CONTRT[i]
+			x2 = tree.CHLD[1].CONTRT[i]
+			x3 = tree.CHLD[2].CONTRT[i]
+			sumV1 += (x2 - x1) * (x2 - x1)
+			sumV3 += (x2 - x3) * (x2 - x3)
+		}
+	} else if sumV3 < 0.0 || tree.CHLD[2].ANC == true && tree.CHLD[2].ISTIP == true {
+		sumV1 = 0.0
+		sumV2 = 0.0
+		sumV3 = 0.0000000000001 //0.0
+		for i := range tree.CHLD[0].CONTRT {
+			x1 = tree.CHLD[0].CONTRT[i]
+			x2 = tree.CHLD[1].CONTRT[i]
+			x3 = tree.CHLD[2].CONTRT[i]
+			sumV1 += (x3 - x1) * (x3 - x1)
+			sumV2 += (x3 - x2) * (x3 - x2)
+		}
+	}
+	if sumV1 != 0.0 {
+		sumV1 = sumV1 / fntraits
+		sumV1 = sumV1 - (tree.CHLD[0].LSPRNLEN - tree.CHLD[0].LSLEN)
+	}
+	if sumV2 != 0.0 {
+		sumV2 = sumV2 / fntraits
+		sumV2 = sumV2 - (tree.CHLD[1].LSPRNLEN - tree.CHLD[1].LSLEN)
+	}
+	if sumV3 != 0.0 {
+		sumV3 = sumV3 / fntraits
+		sumV3 = sumV3 - (tree.CHLD[2].LSPRNLEN - tree.CHLD[2].LSLEN)
+	}
+	if sumV1 < 0. {
+		sumV1 = 0.0
+	}
+	if sumV2 < 0. {
+		sumV2 = 0.0
+	}
+	if sumV3 < 0. {
+		sumV3 = 0.0
+	}
+	tree.CHLD[0].LSLEN = sumV1
+	tree.CHLD[1].LSLEN = sumV2
+	tree.CHLD[2].LSLEN = sumV3
 }
