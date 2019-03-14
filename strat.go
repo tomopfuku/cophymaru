@@ -174,7 +174,7 @@ func MakeStratHeights(tree *Node) {
 func OldestChildAge(node *Node) float64 {
 	oldestChildHeight := 0.0
 	for _, c := range node.CHLD {
-		if c.FAD > oldestChildHeight {
+		if c.FAD > oldestChildHeight && c.NAME+"_ancestral" != node.NAME {
 			oldestChildHeight = c.FAD
 		}
 	}

@@ -65,7 +65,7 @@ func OptimizeMorphStratHeights(tree *Node, lam float64) (float64, float64, []flo
 	var p0 []float64
 	preNodes := tree.PreorderArray()
 	for _, n := range preNodes {
-		if n.ISTIP == false && n.ANC == false {
+		if n.ISTIP == false { // && n.ANC == false {
 			p0 = append(p0, n.HEIGHT)
 		}
 	}
@@ -115,7 +115,7 @@ func OptimizeLamMorphStratHeights(tree *Node) (float64, float64, []float64) {
 	p0 = append(p0, 1.0)
 	preNodes := tree.PreorderArray()
 	for _, n := range preNodes {
-		if n.ISTIP == false && n.ANC == false {
+		if n.ISTIP == false { // && n.ANC == false {
 			p0 = append(p0, n.HEIGHT)
 		}
 	}
@@ -167,7 +167,7 @@ func OptimizeGlobalRateHeights(tree *Node, lam float64) (float64, []float64) {
 	p0 = append(p0, 0.5)
 	preNodes := tree.PreorderArray()
 	for _, n := range preNodes {
-		if len(n.CHLD) > 0 && n.ANC == false {
+		if len(n.CHLD) > 0 { //&& n.ANC == false {
 			p0 = append(p0, n.HEIGHT)
 		}
 	}

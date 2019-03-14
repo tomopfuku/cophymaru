@@ -44,6 +44,40 @@ func MakeAncestor(node *Node) bool {
 		return true
 	}
 	sib := node.GetSib()
+	if node.FAD < sib.FAD {
+		return true
+	}
+	sib.DIRDESC = true
+	node.PAR.NAME = node.NAME + "_ancestral"
+	var newheight float64
+	if node.FAD-node.LAD != 0.0 {
+		//newheight := node.FAD - 0.05
+		newheight = (sib.FAD + node.FAD) / 2.0
+	} else {
+		newheight = node.FAD
+
+	}
+	adjust := node.PAR.HEIGHT - newheight
+	node.PAR.LEN += adjust
+	node.LEN -= adjust
+	sib.LEN -= adjust
+	node.PAR.HEIGHT = newheight
+	node.PAR.FAD = node.FAD
+	node.RATE = 0.0
+	if node.LEN < 0.0 {
+		node.LEN = 0.0
+	}
+	node.ANC = true
+	node.PAR.ANC = true
+	return false
+}
+
+/*
+func MakeAncestor(node *Node) bool {
+	if node.ANC == true || node.ISTIP == false {
+		return true
+	}
+	sib := node.GetSib()
 	sib.DIRDESC = true
 	if node.FAD < sib.FAD && sib.ISTIP == true {
 		return true
@@ -69,9 +103,11 @@ func MakeAncestor(node *Node) bool {
 	node.ANC = true
 	node.PAR.ANC = true
 	node.PAR.NAME = node.NAME + "_ancestral"
+	fmt.Println(node.PAR.NAME, node.PAR.HEIGHT)
+
 	return false
 }
-
+*/
 func MakeAncestorLabel(label string, nodes []*Node) bool {
 	n := NodeFromLabel(label, nodes)
 	bad := MakeAncestor(n)

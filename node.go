@@ -61,6 +61,19 @@ func (n *Node) GetSib() *Node {
 	return sib
 }
 
+//GetContDesc will find the descendent of a direct ancestor that represents the continuation of the lineage after a budding event
+func (n *Node) GetContDesc() (cont *Node) {
+	if n.ANC == false {
+		fmt.Println("can't get the continuation of a hypothetical ancestor")
+	}
+	for _, nn := range n.CHLD {
+		if nn.ANC == true && nn.NAME+"_ancestral" == n.NAME {
+			cont = nn
+		}
+	}
+	return
+}
+
 //Root will root an unrooted tritomy tree in place
 func (n *Node) Root(rootsublen float64) {
 	if len(n.CHLD) == 2 {
@@ -75,6 +88,11 @@ func (n *Node) Root(rootsublen float64) {
 	}
 	var ignodes, ognodes []*Node
 	for _, c := range n.CHLD {
+		if c.ANC == true {
+			nn.NAME = c.NAME + "_ancestral"
+			nn.ANC = true
+			nn.FAD = c.FAD
+		}
 		if c.OUTGRP == true {
 			ognodes = append(ognodes, c)
 		} else {
@@ -107,6 +125,7 @@ func (n *Node) Root(rootsublen float64) {
 		fmt.Println("there was a problem rooting the tree")
 		os.Exit(0)
 	}
+	nn.HEIGHT = n.HEIGHT - nn.LEN
 }
 
 func (n *Node) Unroot() (rootlen float64) {
@@ -295,7 +314,6 @@ func (n *Node) CalcBranchRates() {
 		}
 		if nn.LSLEN != 0.0 && nn.LEN != 0.0 {
 			nn.RATE = nn.LSLEN / nn.LEN
-			fmt.Println(nn.NAME, nn.LSLEN, nn.LEN, nn.RATE)
 
 		} else if nn.LSLEN == 0.0 {
 			nn.RATE = 0.0

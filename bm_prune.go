@@ -131,7 +131,7 @@ func IterateBMLengths(tree *Node, niter int) {
 }
 
 //AncMissingTraitsEM will iteratively calculate the ML branch lengths for a particular topology
-func AncMissingTraitsEM(tree *Node, niter int) {
+func AncMissingTraitsEM(tree *Node, niter int) (nparam float64) {
 	AssertUnrootedTree(tree)
 	nodes := tree.PreorderArray()
 	InitMissingValues(nodes)
@@ -144,6 +144,14 @@ func AncMissingTraitsEM(tree *Node, niter int) {
 			break
 		}
 	}
+	nparam = 0.0
+	for _, n := range nodes {
+		if n.ANC == true && n.ISTIP == true {
+			continue
+		}
+		nparam += 1.0
+	}
+	return
 }
 
 //MissingTraitsEM will iteratively calculate the ML branch lengths for a particular topology
