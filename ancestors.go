@@ -1,44 +1,5 @@
 package cophymaru
 
-func MakeAncestorSameRate(node *Node) bool {
-	if node.ANC == true || node.ISTIP == false {
-		return true
-	}
-	sib := node.GetSib()
-	if node.FAD < sib.FAD && sib.ISTIP == true {
-		return true
-	}
-	lensum := node.LEN + node.PAR.LEN
-	nprop := node.LEN / lensum
-	descprop := node.PAR.LEN / lensum
-	node.PAR.RATE = (node.RATE * nprop) + (node.PAR.RATE * descprop)
-
-	adj := node.PAR.HEIGHT - sib.FAD       //constr
-	node.PAR.LEN += adj                    //sib.FAD //sib.LEN
-	sib.LEN -= adj                         //node.PAR.HEIGHT - sib.FAD
-	if sib.LEN < 0.0 && sib.LEN > -0.001 { //correct for any rounding errors
-		sib.LEN = 0.0
-	}
-	node.PAR.HEIGHT = node.PAR.PAR.HEIGHT - node.PAR.LEN
-	sib.HEIGHT = node.PAR.HEIGHT - sib.LEN
-	if sib.ISTIP == false && sib.ANC == false {
-		sib.FAD = sib.HEIGHT
-	}
-
-	//sib.RATE += node.RATE
-	node.RATE = 0.0
-	node.PAR.FAD = node.FAD
-	node.LEN -= adj
-	node.HEIGHT = node.PAR.HEIGHT - node.LEN
-	if node.LEN < 0.0 {
-		node.LEN = 0.0
-	}
-	node.ANC = true
-	node.PAR.ANC = true
-	node.PAR.NAME = node.NAME + "_ancestral"
-	return false
-}
-
 func MakeAncestor(node *Node) bool {
 	if node.ANC == true || node.ISTIP == false {
 		return true
@@ -49,6 +10,7 @@ func MakeAncestor(node *Node) bool {
 	}
 	sib.DIRDESC = true
 	node.PAR.NAME = node.NAME + "_ancestral"
+	node.PAR.MIS = node.MIS
 	var newheight float64
 	if node.FAD-node.LAD != 0.0 {
 		//newheight := node.FAD - 0.05

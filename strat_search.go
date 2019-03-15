@@ -49,7 +49,7 @@ func checkAllADAIC(tree *Node) (bestLL float64) {
 		tree.Root(sublen)
 		tree.CalcBranchRates()
 		//fmt.Println(tree.Phylogram())
-		comblnl, _, _ = OptimizeMorphStratHeights(tree, lam)
+		//comblnl, _, _ = OptimizeMorphStratHeights(tree, lam)
 		morphlnl = RootedLogLikeParallel(tree, true, 4)
 		stratlnl = ADPoissonTreeLoglike(tree.PreorderArray(), lam)
 		lnl = morphlnl + stratlnl

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -14,58 +15,57 @@ func main() {
 	stratArg := flag.String("r", "", "temporal ranges")
 	traitArg := flag.String("m", "", "continuous traits")
 	threadArg := flag.Int("T", 1, "maximum number of cores to use during run")
+	outgrpArg := flag.String("g", "", "Specify the outgroup taxon/taxa (separated by commas if there are multiple (example: Alouatta,Cercopithecus)")
+	//ancArg := flag.String("a", "", "temporal ranges")
+
 	flag.Parse()
 	runtime.GOMAXPROCS(*threadArg)
 	rand.Seed(time.Now().UTC().UnixNano())
-
 	nwk := cophymaru.ReadLine(*treeArg)[0]
 	tree := cophymaru.ReadTree(nwk)
+	tree.SetOutgroup(strings.Split(*outgrpArg, ","))
+	for _, n := range tree.PreorderArray() {
+		n.LEN = rand.Float64()
+		n.LSLEN = rand.Float64()
+	}
 	nodels := tree.PreorderArray()
 	traits, _, ntraits := cophymaru.ReadContinuous(*traitArg)
 	cophymaru.MapContinuous(tree, traits, ntraits)
+	cophymaru.InitMissingValues(tree.PreorderArray())
 	cophymaru.ReadStrat(*stratArg, nodels)
 	cophymaru.MakeStratHeights(tree)
-	fmt.Println(tree.Newick(true))
-	for _, node := range nodels {
-		node.RATE = 0.4
-	}
-	cophymaru.InitParallelPRNLEN(nodels)
-	start := time.Now()
-	var morphlnl, stratlnl, morphK, stratK, comblnl float64
-	var h_res []float64
-	morphlnl, morphK, _ = cophymaru.OptimizeBranchRates(tree)
-	comblnl, stratK, h_res = cophymaru.OptimizeMorphStratHeights(tree)
-	stratlnl = cophymaru.ADPoissonTreeLoglike(tree.PreorderArray(), h_res[0])
-	fmt.Println(tree.Newick(true))
-	K := morphK + stratK
-	fmt.Println(K, h_res[0])
-	lnl := morphlnl + stratlnl
-	fmt.Println(comblnl, lnl)
-	fmt.Println(morphlnl, stratlnl, cophymaru.AIC(lnl, K))
-	fmt.Println("bifurcating AIC:", cophymaru.AIC(lnl, K))
 	/*
-		cophymaru.MakeAncestorLabel("H_hei", tree.PreorderArray())
-		cophymaru.MakeAncestorLabel("A_africanus", tree.PreorderArray())
-		cophymaru.MakeAncestorLabel("H_erg", tree.PreorderArray())
-		cophymaru.MakeAncestorLabel("H_erectus", tree.PreorderArray())
-		cophymaru.MakeAncestorLabel("P_aet", tree.PreorderArray())
-		cophymaru.MakeAncestorLabel("H_rud", tree.PreorderArray())
+			cophymaru.MakeAncestorLabel(*ancArg, tree.PreorderArray())
+			cophymaru.MakeAncestorLabel("H_rud", tree.PreorderArray())
+			cophymaru.MakeAncestorLabel("H_hei", tree.PreorderArray())
+			//cophymaru.MakeAncestorLabel("H_erg", tree.PreorderArray())
+			//cophymaru.MakeAncestorLabel("H_erectus", tree.PreorderArray())
+			cophymaru.MakeAncestorLabel("A_africanus", tree.PreorderArray())
+			//cophymaru.MakeAncestorLabel("H_sap", tree.PreorderArray())
+			_, _ = cophymaru.OptimizeGlobalRateHeights(tree, 2.8)
+
+			fmt.Println(tree.Newick(true))
+			sublen := tree.Unroot()
+
+			cophymaru.AncMissingTraitsEM(tree, 1000)
+
+			tree.Root(sublen)
+			tree.CalcBranchRates()
+			//cophymaru.InitParallelPRNLEN(nodels)
+			fmt.Println(tree.Phylogram())
+
+			_, _, _ = cophymaru.OptimizeMorphStratHeights(tree, 2.8)
+			fmt.Println(tree.Newick(true))
+			os.Exit(0)
+		fmt.Println("rateogram:", tree.Rateogram())
+		fmt.Println(cophymaru.RootedLogLikeParallel(tree, true, 4))
+		fmt.Println(tree.Phylogram())
+		fmt.Println("rateogram:", tree.Rateogram())
+		fmt.Println(tree.Newick(true))
+
+		os.Exit(0)
 	*/
-	cophymaru.MakeAncestorLabel("Pan_M", tree.PreorderArray())
-	stratlnl = cophymaru.ADPoissonTreeLoglike(tree.PreorderArray(), h_res[0])
-	//cophymaru.UnmakeAncestorLabel("H_rud", tree.PreorderArray())
-	//cophymaru.UnmakeAncestorLabel("H_erg", tree.PreorderArray())
-	//cophymaru.UnmakeAncestorLabel("P_aet", tree.PreorderArray())
-	//fmt.Println(tree.Newick(true))
-	morphlnl, morphK, _ = cophymaru.OptimizeBranchRates(tree)
-	//stratlnl, stratK = cophymaru.OptimizeMorphStratHeights(tree)
-	K = morphK + stratK
-	fmt.Println(K)
-	lnl = morphlnl + stratlnl
-	fmt.Println(morphlnl, stratlnl, cophymaru.AIC(lnl, K))
-	fmt.Println("AD AIC:", cophymaru.AIC(lnl, K))
-	elapsed := time.Since(start)
-	fmt.Println(tree.Newick(true))
-	fmt.Println(elapsed)
-	//fmt.Println(tree.Rateogram(true))
+
+	cophymaru.ADStratTreeSearch(tree)
+	fmt.Println(tree.Phylogram())
 }
