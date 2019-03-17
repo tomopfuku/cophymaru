@@ -31,6 +31,7 @@ type Node struct {
 	LSPRNLEN  float64
 	OUTGRP    bool
 	DIRDESC   bool
+	DISCTRT   map[int]map[string]float64
 }
 
 func (n *Node) GetSib() *Node {
@@ -79,7 +80,7 @@ func (n *Node) Root(rootsublen float64) {
 	if len(n.CHLD) == 2 {
 		fmt.Println("cannot root already rooted tree")
 	}
-	nn := &Node{n, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, 0.0, 0.0, false, false}
+	nn := &Node{n, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, 0.0, 0.0, false, false, nil}
 	nn.CONPRNLEN = make([]float64, len(n.CONTRT))
 	nn.CONTRT = make([]float64, len(n.CONTRT))
 	nn.LL = make([]float64, len(n.CONTRT))
@@ -126,6 +127,17 @@ func (n *Node) Root(rootsublen float64) {
 		os.Exit(0)
 	}
 	nn.HEIGHT = n.HEIGHT - nn.LEN
+
+	if n.DISCTRT != nil {
+		nn.LL = make([]float64, len(n.DISCTRT))
+		nn.DISCTRT = make(map[int]map[string]float64)
+		for site, probs := range n.DISCTRT {
+			nn.DISCTRT[site] = make(map[string]float64)
+			for state, prob := range probs {
+				nn.DISCTRT[site][state] = prob
+			}
+		}
+	}
 }
 
 func (n *Node) Unroot() (rootlen float64) {
@@ -318,7 +330,7 @@ func (n *Node) CalcBranchRates() {
 		} else if nn.LSLEN == 0.0 {
 			nn.RATE = 0.0
 		} else if nn.LEN == 0.0 {
-			nn.RATE = nn.LSLEN / 0.01
+			nn.RATE = nn.LSLEN / 0.1
 		}
 	}
 }
