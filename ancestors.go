@@ -1,5 +1,55 @@
 package cophymaru
 
+//Make2BudAncestor will change a bifurcating budding clade and switch to two independent budding events from node
+func Make2BudAncestor(node *Node) {
+	youngest := 100000000000000.0
+	var moveChld *Node
+	for _, c := range node.CHLD {
+		if c.FAD < youngest {
+			moveChld = c
+			youngest = c.FAD
+		}
+	}
+	oldest := moveChld.GetSib()
+	oldest.LEN += node.LEN
+	oldest.ANC = false
+	node.ANC = false
+	node.RemoveChild(oldest)
+	moveTo := node.GetSib()
+	node.PAR.RemoveChild(moveTo)
+	node.PAR.AddChild(oldest)
+	node.AddChild(moveTo)
+	moveTo.LEN -= node.HEIGHT - moveTo.HEIGHT
+	node.NAME = moveTo.NAME + "_ancestor1"
+	node.ISTIP = true
+	node.ANC = true
+}
+
+func Make2BudTrees(node *Node) bool {
+	par := node.PAR
+	if par.ANC {
+		return true
+	}
+	nn := &Node{nil, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, 0.0, 0.0, false, false, nil}
+	nn.CONTRT = par.CONTRT
+	nn.MIS = par.MIS
+	nn.ANC = true
+	nn.NAME = par.NAME
+	nn.LEN = par.LEN
+	nn.LSLEN = par.LSLEN
+	nn.LSPRNLEN = par.LSPRNLEN
+	nn.PRNLEN = par.PRNLEN
+	nn.CONPRNLEN = par.CONPRNLEN
+	nn.OUTGRP = par.OUTGRP
+	nn.DISCTRT = par.DISCTRT
+	nn.HEIGHT = par.HEIGHT
+	nn.FAD = par.FAD
+	nn.LAD = par.LAD
+	nn.RATE = par.RATE
+	nn.LL = par.LL
+	return false
+}
+
 func MakeAncestor(node *Node) bool {
 	if node.ANC == true || node.ISTIP == false {
 		return true

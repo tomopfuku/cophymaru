@@ -8,8 +8,16 @@ import (
 func ADStratTreeSearch(tree *Node) {
 	//curbest := checkAllADLL(tree)
 	curbest := checkAllADAIC(tree)
+	//Make2BudAncestor(NodeFromLabel("H_erg", tree.PreorderArray()).GetSib())
 	fmt.Println(curbest, tree.Newick(true))
-	fmt.Println(tree.Rateogram())
+	/*
+		sublen := tree.Unroot()
+		morphK := AncMissingTraitsEM(tree, 100)
+		tree.Root(sublen)
+		morphlnl := RootedLogLikeParallel(tree, true, 4)
+		fmt.Println(AIC(morphlnl, morphK))
+	*/
+	//fmt.Println(tree.Rateogram())
 }
 
 func checkAllADAIC(tree *Node) (bestLL float64) {
@@ -33,6 +41,7 @@ func checkAllADAIC(tree *Node) (bestLL float64) {
 	bestLL = AIC(curLL, bifMorphK+stratK)
 	bifLL := bestLL
 	bifMorphLL := morphlnl
+	bifMorphAIC := AIC(bifMorphLL, bifMorphK)
 	//fmt.Println(RootedLogLikeParallel(tree, true, 4), curLL)
 	nodes := tree.PreorderArray()
 	stratlnl = ADPoissonTreeLoglike(nodes, lam)
@@ -58,7 +67,7 @@ func checkAllADAIC(tree *Node) (bestLL float64) {
 		rellike = math.Exp(curLL - (curLL + math.Log1p(math.Exp(bifLL-curLL))))
 		morphrellike := math.Exp(morphlnl - (morphlnl + math.Log1p(math.Exp(bifMorphLL-morphlnl))))
 		ancsupport[n.NAME] = rellike
-		fmt.Println(n.NAME, curLL, bifLL, morphrellike)
+		fmt.Println(n.NAME, curLL, bifLL, AIC(morphlnl, morphK), bifMorphAIC, morphrellike)
 		if curLL < bestLL {
 			bestLL = curLL
 			//UnmakeAncestor(n)
