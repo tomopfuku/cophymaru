@@ -25,29 +25,17 @@ func Make2BudAncestor(node *Node) {
 	node.ANC = true
 }
 
-func Make2BudTrees(node *Node) bool {
-	par := node.PAR
-	if par.ANC {
-		return true
+func Make2BudTrees(ancestor, newdesc *Node) (bool, *Node) {
+	par := ancestor.PAR
+	if par.ANC == false {
+		return true, nil
 	}
-	nn := &Node{nil, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, 0.0, 0.0, false, false, nil}
-	nn.CONTRT = par.CONTRT
-	nn.MIS = par.MIS
-	nn.ANC = true
-	nn.NAME = par.NAME
-	nn.LEN = par.LEN
-	nn.LSLEN = par.LSLEN
-	nn.LSPRNLEN = par.LSPRNLEN
-	nn.PRNLEN = par.PRNLEN
-	nn.CONPRNLEN = par.CONPRNLEN
-	nn.OUTGRP = par.OUTGRP
-	nn.DISCTRT = par.DISCTRT
-	nn.HEIGHT = par.HEIGHT
-	nn.FAD = par.FAD
-	nn.LAD = par.LAD
-	nn.RATE = par.RATE
-	nn.LL = par.LL
-	return false
+	newanc := ancestor.DeepCopySingleNode()
+	//dummy_anc := newanc.DeepCopySingleNode()
+	newanc.NAME += "_ancestral"
+	newanc.ISTIP = false
+	newdesc.PAR.RemoveChild(newdesc)
+	return false, nil
 }
 
 func MakeAncestor(node *Node) bool {

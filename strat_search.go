@@ -10,12 +10,12 @@ func ADStratTreeSearch(tree *Node) {
 	curbest := checkAllADAIC(tree)
 	//Make2BudAncestor(NodeFromLabel("H_erg", tree.PreorderArray()).GetSib())
 	fmt.Println(curbest, tree.Newick(true))
-	/*
-		sublen := tree.Unroot()
-		morphK := AncMissingTraitsEM(tree, 100)
-		tree.Root(sublen)
-		morphlnl := RootedLogLikeParallel(tree, true, 4)
-		fmt.Println(AIC(morphlnl, morphK))
+
+	/*sublen := tree.Unroot()
+	morphK := AncMissingTraitsEM(tree, 100)
+	tree.Root(sublen)
+	morphlnl := RootedLogLikeParallel(tree, true, 4)
+	fmt.Println(AIC(morphlnl, morphK))
 	*/
 	//fmt.Println(tree.Rateogram())
 }

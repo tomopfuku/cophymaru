@@ -34,6 +34,12 @@ type Node struct {
 	DISCTRT   map[int]map[string]float64
 }
 
+//DeepCopySingleNode will create a deep copy of a single node, without including its ancestors or descendants
+func (n *Node) DeepCopySingleNode() *Node {
+	nn := &Node{nil, nil, n.NAME + "_copy", n.LEN, n.PRNLEN, n.CONTRT, n.MRK, n.MIS, n.LL, n.CONPRNLEN, n.FAD, n.LAD, n.HEIGHT, n.FINDS, n.RATE, n.ISTIP, n.ANC, n.LSLEN, n.LSPRNLEN, n.OUTGRP, n.DIRDESC, n.DISCTRT}
+	return nn
+}
+
 func (n *Node) GetSib() *Node {
 	if n.NAME == "root" {
 		fmt.Println("Root node has no sibling")
