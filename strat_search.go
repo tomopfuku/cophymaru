@@ -23,18 +23,20 @@ func ADStratTreeSearch(tree *Node) {
 func checkAllADAIC(tree *Node) (bestLL float64) {
 	var morphlnl, stratlnl, comblnl float64
 	_, lam := OptimizePreservationLam(tree)
-	morphlnl, _ = OptimizeGlobalRateHeights(tree, lam)
+	//morphlnl, _ = OptimizeGlobalRateHeights(tree, lam)
 	sublen := tree.Unroot()
-	bifMorphK := AncMissingTraitsEM(tree, 100)
+	bifMorphK := AncMissingTraitsEM(tree, 10)
 	tree.Root(sublen)
-	tree.CalcBranchRates()
+	//tree.CalcBranchRates()
 	var stratK float64
-	comblnl, stratK, _ = OptimizeMorphStratHeights(tree, lam)
+	//comblnl, stratK, _ = OptimizeMorphStratHeights(tree, lam)
 	stratK += 1.0
+	nodes := tree.PreorderArray()
 	morphlnl = RootedLogLikeParallel(tree, true, 4)
+	stratlnl = ADPoissonTreeLoglike(nodes, lam)
 	//morphlnl, _, _ = OptimizeBranchRates(tree)
 	fmt.Println(tree.Newick(true))
-	lnl := comblnl //morphlnl + stratlnl
+	lnl := morphlnl + stratlnl
 	tips := tree.PreorderTips()
 	testNodes := candidateAncestors(tips)
 	curLL := lnl
@@ -43,8 +45,6 @@ func checkAllADAIC(tree *Node) (bestLL float64) {
 	bifMorphLL := morphlnl
 	bifMorphAIC := AIC(bifMorphLL, bifMorphK)
 	//fmt.Println(RootedLogLikeParallel(tree, true, 4), curLL)
-	nodes := tree.PreorderArray()
-	stratlnl = ADPoissonTreeLoglike(nodes, lam)
 	fmt.Println(morphlnl, stratlnl, comblnl)
 	var rellike float64
 	ancsupport := make(map[string]float64)
@@ -54,9 +54,9 @@ func checkAllADAIC(tree *Node) (bestLL float64) {
 			continue
 		}
 		sublen := tree.Unroot()
-		morphK := AncMissingTraitsEM(tree, 100)
+		morphK := AncMissingTraitsEM(tree, 10)
 		tree.Root(sublen)
-		tree.CalcBranchRates()
+		//tree.CalcBranchRates()
 		//fmt.Println(tree.Phylogram())
 		//comblnl, _, _ = OptimizeMorphStratHeights(tree, lam)
 		morphlnl = RootedLogLikeParallel(tree, true, 4)
@@ -144,7 +144,10 @@ func checkAllADLL(tree *Node) (bestLL float64) {
 
 func candidateAncestors(tips []*Node) (anc []*Node) {
 	for _, n := range tips {
-		if n.FAD > n.GetSib().FAD && n.PAR.NAME != "root" {
+		sib := n.GetSib()
+		oldest := sib.OldestDescendantAge()
+		fmt.Println(n.NAME, n.FAD, oldest)
+		if n.FAD > oldest && n.PAR.NAME != "root" {
 			anc = append(anc, n)
 		}
 	}

@@ -67,7 +67,6 @@ func MakeAncestor(node *Node) bool {
 		newheight = (sib.FAD + node.FAD) / 2.0
 	} else {
 		newheight = node.FAD
-
 	}
 	adjust := node.PAR.HEIGHT - newheight
 	node.PAR.LEN += adjust

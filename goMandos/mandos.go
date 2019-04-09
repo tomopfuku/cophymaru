@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"cophymaru"
 	"flag"
 	"fmt"
+	"log"
 	"math/rand"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -16,6 +19,7 @@ func main() {
 	traitArg := flag.String("m", "", "continuous traits")
 	threadArg := flag.Int("T", 1, "maximum number of cores to use during run")
 	outgrpArg := flag.String("g", "", "Specify the outgroup taxon/taxa (separated by commas if there are multiple (example: Alouatta,Cercopithecus)")
+	runNameArg := flag.String("o", "mandos", "name for the run")
 	//ancArg := flag.String("a", "", "temporal ranges")
 
 	flag.Parse()
@@ -67,5 +71,27 @@ func main() {
 	*/
 
 	cophymaru.ADStratTreeSearch(tree)
-	fmt.Println(tree.Phylogram())
+	f, err := os.Create(*runNameArg + "_phylogram.tre")
+	if err != nil {
+		log.Fatal(err)
+	}
+	w := bufio.NewWriter(f)
+	fmt.Fprint(w, tree.Phylogram())
+	err = w.Flush()
+	if err != nil {
+		log.Fatal(err)
+	}
+	f.Close()
+	f, err = os.Create(*runNameArg + "_r8s.tre")
+	if err != nil {
+		log.Fatal(err)
+	}
+	w = bufio.NewWriter(f)
+	fmt.Fprint(w, tree.Phylogram())
+	err = w.Flush()
+	if err != nil {
+		log.Fatal(err)
+	}
+	f.Close()
+
 }

@@ -34,6 +34,19 @@ type Node struct {
 	DISCTRT   map[int]map[string]float64
 }
 
+func (n *Node) OldestDescendantAge() float64 {
+	oldest := 0.0
+	for _, c := range n.PreorderArray() {
+		if c.ISTIP == false {
+			continue
+		}
+		if c.FAD > oldest {
+			oldest = c.FAD
+		}
+	}
+	return oldest
+}
+
 func (n *Node) GetSib() *Node {
 	if n.NAME == "root" {
 		fmt.Println("Root node has no sibling")
