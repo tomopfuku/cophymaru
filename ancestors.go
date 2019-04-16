@@ -25,6 +25,7 @@ func Make2BudAncestor(node *Node) {
 	node.ANC = true
 }
 
+/*
 func Make2BudTrees(ancestor, newdesc *Node) (bool, *Node) {
 	par := ancestor.PAR
 	if par.ANC == false {
@@ -37,6 +38,7 @@ func Make2BudTrees(ancestor, newdesc *Node) (bool, *Node) {
 	newdesc.PAR.RemoveChild(newdesc)
 	return false, nil
 }
+*/
 
 func MakeAncestor(node *Node) bool {
 	if node.ANC == true || node.ISTIP == false {
