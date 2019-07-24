@@ -33,60 +33,60 @@ func IterateDiscBL(tree *Node, niter int) (nparam float64) {
 func discCalcLengths(tree *Node) {
 	rnodes := tree.PreorderArray()
 	lnode := 0
-	for _, cn := range tree.CHLD {
+	for _, cn := range tree.Chs {
 		AncDiscPruneRooted(cn)
 	}
 	DiscTritomyML(tree)
 	/*
 
 		fmt.Println(tree.Phylogram())
-		//next := NodeFromLabel("taxon_4", rnodes).PAR
-		//old := NodeFromLabel("taxon_4", rnodes).PAR
+		//next := NodeFromLabel("taxon_4", rnodes).Par
+		//old := NodeFromLabel("taxon_4", rnodes).Par
 		tree = next.RerootLS(tree)
-		for _, cn := range tree.CHLD {
+		for _, cn := range tree.Chs {
 			AncDiscPruneRooted(cn)
-			if cn.NAME == "root" || cn.NAME == "FU" {
-				fmt.Println(cn.NAME, cn.DISCTRT[0])
+			if cn.Nam == "root" || cn.Nam == "FU" {
+				fmt.Println(cn.Nam, cn.DISCTRT[0])
 			}
 
 		}
 		DiscTritomyML(tree)
-			next = NodeFromLabel("taxon_1", rnodes).PAR.PAR
+			next = NodeFromLabel("taxon_1", rnodes).Par.Par
 			tree = next.RerootLS(old)
-			for _, cn := range tree.CHLD {
+			for _, cn := range tree.Chs {
 				AncDiscPruneRooted(cn)
-				//if cn.NAME == "root" || cn.NAME == "FU" {
-				fmt.Println(cn.NAME, cn.DISCTRT[0])
+				//if cn.Nam == "root" || cn.Nam == "FU" {
+				fmt.Println(cn.Nam, cn.DISCTRT[0])
 				//}
 			}
 			fmt.Println(tree.Phylogram())
-			for _, cn := range tree.CHLD {
-				//if cn.NAME == "root" || cn.NAME == "FU" {
-				fmt.Println(cn.NAME, cn.DISCTRT[0])
+			for _, cn := range tree.Chs {
+				//if cn.Nam == "root" || cn.Nam == "FU" {
+				fmt.Println(cn.Nam, cn.DISCTRT[0])
 				//}
 			}
 
 			internalStateProbs(rnodes[0])
-			fmt.Println(old.PAR.NAME, old.CHLD[0].NAME, old.CHLD[1].NAME)
+			fmt.Println(old.Par.Nam, old.Chs[0].Nam, old.Chs[1].Nam)
 			internalStateProbs(old)
 
-			for _, cn := range tree.CHLD {
-				//if cn.NAME == "root" || cn.NAME == "FU" {
-				fmt.Println(cn.NAME, cn.DISCTRT[0])
+			for _, cn := range tree.Chs {
+				//if cn.Nam == "root" || cn.Nam == "FU" {
+				fmt.Println(cn.Nam, cn.DISCTRT[0])
 				//}
 			}
 			DiscTritomyML(tree)
 			//fmt.Println(tree.Phylogram())
 	*/
 	for ind, newroot := range rnodes {
-		if len(newroot.CHLD) == 0 {
+		if len(newroot.Chs) == 0 {
 			continue
 		} else if newroot != rnodes[0] {
 			tree = newroot.RerootLS(rnodes[lnode])
 
 			lnode = ind
 		}
-		for _, cn := range tree.CHLD {
+		for _, cn := range tree.Chs {
 			AncDiscPruneRooted(cn)
 		}
 		DiscTritomyML(tree)
@@ -96,17 +96,17 @@ func discCalcLengths(tree *Node) {
 }
 
 func internalStateProbs(n *Node) {
-	c0 := n.CHLD[0]
-	c1 := n.CHLD[1]
-	totalVar := c0.LSPRNLEN + c1.LSPRNLEN
+	c0 := n.Chs[0]
+	c1 := n.Chs[1]
+	totalVar := c0.LSPRNLen + c1.LSPRNLen
 	var c0weight, c1weight float64
-	if c0.LSPRNLEN != 0.0 {
-		c0weight = (c0.LSPRNLEN / totalVar)
+	if c0.LSPRNLen != 0.0 {
+		c0weight = (c0.LSPRNLen / totalVar)
 	} else {
 		c0weight = 0.0
 	}
-	if c1.LSPRNLEN != 0.0 {
-		c1weight = (c1.LSPRNLEN / totalVar)
+	if c1.LSPRNLen != 0.0 {
+		c1weight = (c1.LSPRNLen / totalVar)
 	} else {
 		c1weight = 0.0
 	}
@@ -122,27 +122,27 @@ func internalStateProbs(n *Node) {
 //AncDiscPruneRooted will prune Disc branch lens and PICs down to a rooted node
 //root node should be a real (ie. bifurcating) root
 func AncDiscPruneRooted(n *Node) {
-	for _, chld := range n.CHLD {
+	for _, chld := range n.Chs {
 		AncDiscPruneRooted(chld)
 	}
-	n.LSPRNLEN = n.LSLEN
-	nchld := len(n.CHLD)
-	if n.ISTIP == false { //&& n.MRK == false {
+	n.LSPRNLen = n.LSLen
+	nchld := len(n.Chs)
+	if n.ISTIP == false { //&& n.Marked == false {
 		if nchld != 2 {
 			fmt.Println("This should only be perfomed on fully bifurcating trees/subtrees! Check for multifurcations and singletons.")
 			os.Exit(0)
 		}
 		internalStateProbs(n)
 		/*
-			c0 := n.CHLD[0]
-			c1 := n.CHLD[1]
-			if c0.NAME == "taxon_4" || c1.NAME == "taxon_4" {
-				n.NAME = "FU"
-				//fmt.Println(n.NAME, "HERE", n.DISCTRT[0])
+			c0 := n.Chs[0]
+			c1 := n.Chs[1]
+			if c0.Nam == "taxon_4" || c1.Nam == "taxon_4" {
+				n.Nam = "FU"
+				//fmt.Println(n.Nam, "HERE", n.DISCTRT[0])
 			}
-			//bot := ((1.0 / c0.LSPRNLEN) + (1.0 / c1.LSPRNLEN))
-				if c0.LSPRNLEN != 0.0 && c1.LSPRNLEN != 0.0 {
-					n.LSPRNLEN += (c0.LSPRNLEN * c1.LSPRNLEN) / (c0.LSPRNLEN * c1.LSPRNLEN)
+			//bot := ((1.0 / c0.LSPRNLen) + (1.0 / c1.LSPRNLen))
+				if c0.LSPRNLen != 0.0 && c1.LSPRNLen != 0.0 {
+					n.LSPRNLen += (c0.LSPRNLen * c1.LSPRNLen) / (c0.LSPRNLen * c1.LSPRNLen)
 				}
 		*/
 	}
@@ -165,9 +165,9 @@ func calcSeqDistance(c0, c1 *Node) (dist float64) {
 
 //DiscTritomyML will calculate the MLEs for the branch lengths of a tifurcating 3-taxon tree assuming that direct ancestors may be in the tree
 func DiscTritomyML(tree *Node) {
-	c0 := tree.CHLD[0]
-	c1 := tree.CHLD[1]
-	c2 := tree.CHLD[2]
+	c0 := tree.Chs[0]
+	c1 := tree.Chs[1]
+	c2 := tree.Chs[2]
 
 	d01 := calcSeqDistance(c0, c1)
 	d02 := calcSeqDistance(c0, c2)
@@ -192,13 +192,13 @@ func DiscTritomyML(tree *Node) {
 
 	/*
 		if sum0 != 0.0 {
-			sum0 = sum0 - (tree.CHLD[0].LSPRNLEN - tree.CHLD[0].LSLEN)
+			sum0 = sum0 - (tree.Chs[0].LSPRNLen - tree.Chs[0].LSLen)
 		}
 		if sum1 != 0.0 {
-			sum1 = sum1 - (tree.CHLD[1].LSPRNLEN - tree.CHLD[1].LSLEN)
+			sum1 = sum1 - (tree.Chs[1].LSPRNLen - tree.Chs[1].LSLen)
 		}
 		if sum2 != 0.0 {
-			sum2 = sum2 - (tree.CHLD[2].LSPRNLEN - tree.CHLD[2].LSLEN)
+			sum2 = sum2 - (tree.Chs[2].LSPRNLen - tree.Chs[2].LSLen)
 		}
 	*/
 	if sum0 < 0. {
@@ -211,7 +211,7 @@ func DiscTritomyML(tree *Node) {
 		sum2 = 0.0
 	}
 
-	tree.CHLD[0].LSLEN = sum0
-	tree.CHLD[1].LSLEN = sum1
-	tree.CHLD[2].LSLEN = sum2
+	tree.Chs[0].LSLen = sum0
+	tree.Chs[1].LSLen = sum1
+	tree.Chs[2].LSLen = sum2
 }

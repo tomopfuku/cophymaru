@@ -78,8 +78,8 @@ func MakeMissingDataSlice(t *Node) {
 func MapContinuous(t *Node, traits map[string][]float64, ntraits int) {
 	var z float64
 	z = 0.000000000
-	if len(t.CHLD) == 0 {
-		t.CONTRT = traits[t.NAME]
+	if len(t.Chs) == 0 {
+		t.CONTRT = traits[t.Nam]
 		t.LL = append(t.LL, z)
 		MakeMissingDataSlice(t)
 	} else {
@@ -93,10 +93,10 @@ func MapContinuous(t *Node, traits map[string][]float64, ntraits int) {
 			t.LL = append(t.LL, z)
 			count++
 		}
-		t.CONPRNLEN = make([]float64, len(t.CONTRT))
+		t.CONPRNLen = make([]float64, len(t.CONTRT))
 	}
-	t.CONPRNLEN = make([]float64, len(t.CONTRT))
-	for _, chld := range t.CHLD {
+	t.CONPRNLen = make([]float64, len(t.CONTRT))
+	for _, chld := range t.Chs {
 		MapContinuous(chld, traits, ntraits)
 	}
 }

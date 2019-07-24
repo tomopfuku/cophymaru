@@ -51,8 +51,8 @@ func singleBrlenMultiplierProp(theta float64, epsilon float64) (thetaStar, propR
 func getProposedBrlens(nodes []*Node) []float64 {
 	var oldL []float64
 	for _, i := range nodes {
-		oldL = append(oldL, i.LEN)
-		i.LEN = brlenSlidingWindow(i.LEN, 0.2)
+		oldL = append(oldL, i.Len)
+		i.Len = brlenSlidingWindow(i.Len, 0.2)
 	}
 	return oldL
 }
@@ -61,7 +61,7 @@ func getFossilNodesFromLabel(fnames []string, nodes []*Node) []*Node {
 	var ret []*Node
 	for _, n := range nodes {
 		for _, lab := range fnames {
-			if n.NAME == lab {
+			if n.Nam == lab {
 				ret = append(ret, n)
 			}
 		}
@@ -105,7 +105,7 @@ func (chain *MCMC) initializePlacementRun(tree *Node, fnames []string) (nodes, f
 	nodes = tree.PreorderArray()[1:]
 	fos = getFossilNodesFromLabel(fnames, nodes)
 	innodes = InternalNodeSlice(nodes)
-	InitParallelPRNLEN(nodes)
+	InitParallelPRNLen(nodes)
 	prior = InitializePrior(chain.BRANCHPRIOR, nodes)
 	treeLogLikelihood = InitLL(chain.MULTI, chain.WORKERS, chain.SITEWEIGHTS)
 	runtime.GOMAXPROCS(chain.PROC)
@@ -116,7 +116,7 @@ func (chain *MCMC) initializePlacementRun(tree *Node, fnames []string) (nodes, f
 func (chain *MCMC) initializeReconRun(tree *Node) (nodes, innodes []*Node, prior *BranchLengthPrior, treeLogLikelihood *LL) {
 	nodes = tree.PreorderArray()[1:]
 	innodes = InternalNodeSlice(nodes)
-	InitParallelPRNLEN(nodes)
+	InitParallelPRNLen(nodes)
 	prior = InitializePrior(chain.BRANCHPRIOR, nodes)
 	treeLogLikelihood = InitLL(chain.MULTI, chain.WORKERS, chain.SITEWEIGHTS)
 	runtime.GOMAXPROCS(chain.PROC)
@@ -171,7 +171,7 @@ func (chain *MCMC) FullRun(tree *Node) {
 			} else {
 				r := rand.Float64()
 				if r > 0.1 { // apply single branch length update 95% of the time
-					lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLENS
+					lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLenS
 				} else {
 					lp, ll = cladeBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon)
 				}
@@ -182,7 +182,7 @@ func (chain *MCMC) FullRun(tree *Node) {
 		} else {
 			r := rand.Float64()
 			if r > 0.1 { // apply single branch length update 95% of the time
-				lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLENS
+				lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLenS
 			} else {
 				lp, ll = cladeBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon)
 			}
@@ -239,7 +239,7 @@ func (chain *MCMC) Run(tree *Node, fnames []string) {
 	for i := 0; i < chain.NGEN; i++ {
 		oldLL = ll
 		if i%3 == 0 || i == 0 {
-			//lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLENS
+			//lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, branchPrior, missing, weights) //NOTE uncomment to sample BRLenS
 			lp, ll = fossilPlacementUpdate(ll, lp, fos, nodes, tree, chain, branchPrior, treeLogLikelihood)
 			if ll != oldLL {
 				topAcceptanceCount = topAcceptanceCount + 1.0
@@ -247,7 +247,7 @@ func (chain *MCMC) Run(tree *Node, fnames []string) {
 		} else {
 			r := rand.Float64()
 			if r > 0.1 { // apply single branch length update 95% of the time
-				lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLENS
+				lp, ll = singleBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon) //NOTE uncomment to sample BRLenS
 			} else {
 				lp, ll = cladeBranchLengthUpdate(ll, lp, nodes, inNodes, tree, chain, branchPrior, treeLogLikelihood, epsilon)
 			}
@@ -296,7 +296,7 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, ch
 	fn := drawRandomNode(fnodes) //draw a random fossil tip
 	reattach := drawRandomReattachment(fn, nodes)
 	x, p, lastn := PruneFossilTip(fn)
-	r := GraftFossilTip(fn.PAR, reattach)
+	r := GraftFossilTip(fn.Par, reattach)
 	propRat := r / (x * p)
 	llstar := treeLL.Calc(tree, true)
 	lpstar := branchPrior.Calc(nodes)
@@ -307,9 +307,9 @@ func fossilPlacementUpdate(ll, lp float64, fnodes, nodes []*Node, tree *Node, ch
 		lp = lpstar
 	} else { //move fossil back to its previous position and restore old branch lengths
 		PruneFossilTip(fn)
-		GraftFossilTip(fn.PAR, lastn)
-		lastn.LEN = x
-		fn.PAR.LEN = p
+		GraftFossilTip(fn.Par, lastn)
+		lastn.Len = x
+		fn.Par.Len = p
 	}
 	return lp, ll
 }
@@ -320,7 +320,7 @@ func sprUpdate(ll, lp float64, nodes []*Node, tree *Node, chain *MCMC, branchPri
 	//fmt.Println(tree.Newick(true))
 	fn := drawRandomSubtree(tree, nodes[1:]) //draw a random fossil tip
 	excluden := make(map[*Node]bool)
-	excluden[fn.PAR] = true
+	excluden[fn.Par] = true
 	for _, n := range fn.PreorderArray() {
 		excluden[n] = true
 	}
@@ -331,10 +331,10 @@ func sprUpdate(ll, lp float64, nodes []*Node, tree *Node, chain *MCMC, branchPri
 		}
 	}
 	reattach := drawRandomReattachment(fn, rdraw)
-	//fmt.Println("PRN", fn.PAR.Newick(true))
+	//fmt.Println("PRN", fn.Par.Newick(true))
 	//fmt.Println("REATTACH", reattach.Newick(true))
 	x, p, lastn := PruneFossilTip(fn)
-	r := GraftFossilTip(fn.PAR, reattach)
+	r := GraftFossilTip(fn.Par, reattach)
 	//fmt.Println(tree.Newick(true))
 	propRat := r / (x * p)
 	llstar := treeLL.Calc(tree, true)
@@ -346,19 +346,19 @@ func sprUpdate(ll, lp float64, nodes []*Node, tree *Node, chain *MCMC, branchPri
 		lp = lpstar
 	} else { //move fossil back to its previous position and restore old branch lengths
 		PruneFossilTip(fn)
-		GraftFossilTip(fn.PAR, lastn)
-		lastn.LEN = x
-		fn.PAR.LEN = p
+		GraftFossilTip(fn.Par, lastn)
+		lastn.Len = x
+		fn.Par.Len = p
 	}
 	return lp, ll
 }
 
 func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node, chain *MCMC, branchPrior *BranchLengthPrior, treeLL *LL, epsilon float64) (float64, float64) {
 	updateNode := RandomNode(nodes)
-	soldL := updateNode.LEN
+	soldL := updateNode.Len
 	//updateNode.UnmarkToRoot(tree)
 	var propRat float64
-	updateNode.LEN, propRat = singleBrlenMultiplierProp(updateNode.LEN, epsilon)
+	updateNode.Len, propRat = singleBrlenMultiplierProp(updateNode.Len, epsilon)
 	//updateNode.UnmarkToRoot(tree)
 	llstar := treeLL.Calc(tree, true)
 	//MarkAll(nodes)
@@ -373,7 +373,7 @@ func singleBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node
 		lp = lpstar
 	} else {
 		//updateNode.UnmarkToRoot(tree)
-		updateNode.LEN = soldL
+		updateNode.Len = soldL
 	}
 	return lp, ll
 }
@@ -383,12 +383,12 @@ func cladeBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node,
 	updateClade := updateNode.PostorderArray()
 	var oldlens []float64
 	for _, node := range updateClade {
-		oldlens = append(oldlens, node.LEN)
+		oldlens = append(oldlens, node.Len)
 	}
 	newlens, propRat := cladeBrlenMultiplierProp(oldlens, epsilon)
 	for i, node := range updateClade {
-		node.LEN = newlens[i]
-		node.MRK = false
+		node.Len = newlens[i]
+		node.Marked = false
 	}
 	//updateNode.UnmarkToRoot(tree)
 	llstar := treeLL.Calc(tree, true)
@@ -403,7 +403,7 @@ func cladeBranchLengthUpdate(ll, lp float64, nodes, inNodes []*Node, tree *Node,
 	} else {
 		//updateNode.UnmarkToRoot(tree)
 		for i, node := range updateClade {
-			node.LEN = oldlens[i]
+			node.Len = oldlens[i]
 		}
 	}
 	return lp, ll
@@ -426,7 +426,7 @@ func RandomNode(nodes []*Node) (rnode *Node) {
 func RandomInternalNode(nodes []*Node) (rnode *Node) {
 	rnoden := rand.Intn(len(nodes))
 	rnode = nodes[rnoden] //choose a random reattachment point
-	if len(rnode.CHLD) == 0 {
+	if len(rnode.Chs) == 0 {
 		rnode = RandomInternalNode(nodes)
 	}
 	return
@@ -435,7 +435,7 @@ func RandomInternalNode(nodes []*Node) (rnode *Node) {
 func drawRandomSubtree(rt *Node, nodes []*Node) (rnode *Node) {
 	rnoden := rand.Intn(len(nodes))
 	rnode = nodes[rnoden] //choose a random reattachment point
-	if rnode.PAR == rt {
+	if rnode.Par == rt {
 		rnode = drawRandomSubtree(rt, nodes)
 	} else if rnode == rt {
 		rnode = drawRandomSubtree(rt, nodes)
@@ -448,7 +448,7 @@ func drawRandomReattachment(fn *Node, nodes []*Node) (rnode *Node) {
 	rnode = nodes[rnoden] //choose a random reattachment point
 	if rnode == fn {
 		rnode = drawRandomReattachment(fn, nodes)
-	} else if rnode == fn.PAR {
+	} else if rnode == fn.Par {
 		rnode = drawRandomReattachment(fn, nodes)
 	}
 	return
@@ -460,31 +460,31 @@ func drawRandomReattachment(fn *Node, nodes []*Node) (rnode *Node) {
 //return value is for calculating proposal ratio later
 func PruneFossilTip(tip *Node) (x, p float64, lastn *Node) {
 	var n *Node
-	newpar := tip.PAR
-	for _, chd := range newpar.CHLD {
+	newpar := tip.Par
+	for _, chd := range newpar.Chs {
 		if chd != tip {
 			n = chd
 		}
 	}
-	newpar.PAR.AddChild(n)
+	newpar.Par.AddChild(n)
 	newpar.RemoveChild(n)
-	n.PAR = newpar.PAR
-	newpar.PAR.RemoveChild(newpar)
-	x = n.LEN
-	p = newpar.LEN
+	n.Par = newpar.Par
+	newpar.Par.RemoveChild(newpar)
+	x = n.Len
+	p = newpar.Len
 	lastn = n
-	n.LEN = n.LEN + newpar.LEN
+	n.Len = n.Len + newpar.Len
 	return
 }
 
 //GraftFossilTip reattaches a fossil tip (newpar) to branch n at a random point
 func GraftFossilTip(newpar *Node, n *Node) float64 {
-	r := n.LEN
-	n.PAR.AddChild(newpar)
-	n.PAR.RemoveChild(n)
+	r := n.Len
+	n.Par.AddChild(newpar)
+	n.Par.RemoveChild(n)
 	newpar.AddChild(n)
 	u := rand.Float64()
-	newpar.LEN = u * n.LEN
-	n.LEN = n.LEN * (1 - u)
+	newpar.Len = u * n.Len
+	n.Len = n.Len * (1 - u)
 	return r
 }

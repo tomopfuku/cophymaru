@@ -86,11 +86,11 @@ func MapDiscrete(t *Node, traits map[string][]string) {
 	siteProbsMap := makeSiteProbsMap(traits)
 	for _, n := range t.PreorderArray() {
 		if n.ISTIP {
-			if _, ok := traits[n.NAME]; !ok {
-				fmt.Println("No traits provided for ", n.NAME)
+			if _, ok := traits[n.Nam]; !ok {
+				fmt.Println("No traits provided for ", n.Nam)
 				os.Exit(0)
 			}
-			n.DISCTRT = siteProbsMap[n.NAME]
+			n.DISCTRT = siteProbsMap[n.Nam]
 		} else {
 			n.DISCTRT = make(map[int]map[string]float64)
 			for site, probs := range siteProbsMap["internal"] {
@@ -102,7 +102,7 @@ func MapDiscrete(t *Node, traits map[string][]string) {
 		}
 		for range n.DISCTRT {
 			n.LL = append(n.LL, 0.0)
-			n.CONPRNLEN = append(n.CONPRNLEN, 0.0)
+			n.CONPRNLen = append(n.CONPRNLen, 0.0)
 		}
 	}
 }

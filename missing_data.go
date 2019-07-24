@@ -4,7 +4,7 @@ package cophymaru
 func InitMissingValues(tree []*Node) {
 	means := CalcSiteMeans(tree)
 	for _, n := range tree {
-		if len(n.CHLD) == 0 {
+		if len(n.Chs) == 0 {
 			MakeMissingMeansTip(n, means)
 		}
 	}
@@ -27,7 +27,7 @@ func CalcSiteMeans(nodes []*Node) (siteSum []float64) {
 		ntraits = append(ntraits, 0)
 	}
 	for _, n := range nodes {
-		if len(n.CHLD) != 0 {
+		if len(n.Chs) != 0 {
 			continue
 		}
 		for i, tr := range n.CONTRT {
@@ -53,29 +53,29 @@ func CalcExpectedTraits(tree *Node) {
 	var ltrait float64
 	var llen float64
 	for ind, newroot := range rnodes { //visit each internal node and check any leaves for missing data. if found, calculate input expected value as the PIC at newroot
-		if len(newroot.CHLD) == 0 {
+		if len(newroot.Chs) == 0 {
 			continue
 		} else if newroot != rnodes[0] {
 			tree = newroot.Reroot(rnodes[lnode])
 			lnode = ind
 		}
-		for _, cn := range tree.CHLD {
-			if len(cn.CHLD) == 0 { // visit any leaves subtending from newroot
+		for _, cn := range tree.Chs {
+			if len(cn.Chs) == 0 { // visit any leaves subtending from newroot
 				for traitIndex := range cn.CONTRT {
 					if cn.MIS[traitIndex] == true { // check if trait is missing and calculate expectation for each missing value
 						bot = 0.
 						childCount := 0
-						for _, cn2 := range tree.CHLD { //calculate PIC at newroot
+						for _, cn2 := range tree.Chs { //calculate PIC at newroot
 							if cn2 != cn {
 								childCount++
 								BMPruneRootedSingle(cn2, traitIndex) // prune root to 3-tip tree
-								bot += 1. / cn2.PRNLEN
+								bot += 1. / cn2.PRNLen
 								if childCount == 2 {
-									top = ((1. / cn2.PRNLEN) * ltrait) + ((1. / llen) * cn2.CONTRT[traitIndex])
+									top = ((1. / cn2.PRNLen) * ltrait) + ((1. / llen) * cn2.CONTRT[traitIndex])
 									break
 								}
 								ltrait = cn2.CONTRT[traitIndex]
-								llen = cn2.PRNLEN
+								llen = cn2.PRNLen
 							}
 						}
 						expect = top / bot
@@ -99,29 +99,29 @@ func AncCalcExpectedTraits(tree *Node) {
 	var ltrait float64
 	var llen float64
 	for ind, newroot := range rnodes { //visit each internal node and check any leaves for missing data. if found, calculate input expected value as the PIC at newroot
-		if len(newroot.CHLD) == 0 {
+		if len(newroot.Chs) == 0 {
 			continue
 		} else if newroot != rnodes[0] {
 			tree = newroot.RerootLS(rnodes[lnode])
 			lnode = ind
 		}
-		for _, cn := range tree.CHLD {
-			if len(cn.CHLD) == 0 { // visit any leaves subtending from newroot
+		for _, cn := range tree.Chs {
+			if len(cn.Chs) == 0 { // visit any leaves subtending from newroot
 				for traitIndex := range cn.CONTRT {
 					if cn.MIS[traitIndex] == true { // check if trait is missing and calculate expectation for each missing value
 						bot = 0.
 						childCount := 0
-						for _, cn2 := range tree.CHLD { //calculate PIC at newroot
+						for _, cn2 := range tree.Chs { //calculate PIC at newroot
 							if cn2 != cn {
 								childCount++
 								AncBMPruneRootedSingle(cn2, traitIndex) // prune root to 3-tip tree
-								bot += 1. / cn2.LSPRNLEN
+								bot += 1. / cn2.LSPRNLen
 								if childCount == 2 {
-									top = ((1. / cn2.LSPRNLEN) * ltrait) + ((1. / llen) * cn2.CONTRT[traitIndex])
+									top = ((1. / cn2.LSPRNLen) * ltrait) + ((1. / llen) * cn2.CONTRT[traitIndex])
 									break
 								}
 								ltrait = cn2.CONTRT[traitIndex]
-								llen = cn2.LSPRNLEN
+								llen = cn2.LSPRNLen
 							}
 						}
 						expect = top / bot

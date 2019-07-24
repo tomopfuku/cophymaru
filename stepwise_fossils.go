@@ -10,13 +10,13 @@ func InsertFossilTaxa(tree *Node, traits map[string][]float64, fosNms []string, 
 	//MakeMissingMeansArray(nodes)
 	for _, curFos := range fosNms {
 		ftip := new(Node)
-		ftip.NAME = curFos
-		ftip.LEN = 0.01
+		ftip.Nam = curFos
+		ftip.Len = 0.01
 		ftip.CONTRT = traits[curFos]
 		MakeMissingDataSlice(ftip)
 		//MakeMissingMeansTip(ftip, trMeans) //replace missing traits with the mean value across all sample traits
 		newpar := new(Node)
-		newpar.LEN = 0.01
+		newpar.Len = 0.01
 		newpar.AddChild(ftip)
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
@@ -68,13 +68,13 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 	nodes := tree.PreorderArray()
 	for _, curFos := range fosNms {
 		ftip := new(Node)
-		ftip.NAME = curFos
-		ftip.LEN = 0.01
+		ftip.Nam = curFos
+		ftip.Len = 0.01
 		ftip.CONTRT = traits[curFos]
 		MakeMissingDataSlice(ftip)
 		//MakeMissingMeansTip(ftip, trMeans) //replace missing traits with the mean value across all sample traits
 		newpar := new(Node)
-		newpar.LEN = 0.01
+		newpar.Len = 0.01
 		newpar.AddChild(ftip)
 		for range ftip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
@@ -95,18 +95,18 @@ func InsertFossilTaxaRandom(tree *Node, traits map[string][]float64, fosNms []st
 //PruneTip will prune a fossil (or any) tip from a tree
 //newpar is the parent of the tip you wish to prune, n is the other child of newpar
 func PruneTip(newpar *Node, n *Node) {
-	newpar.PAR.AddChild(n)
+	newpar.Par.AddChild(n)
 	newpar.RemoveChild(n)
-	n.PAR = newpar.PAR
-	newpar.PAR.RemoveChild(newpar)
-	n.LEN = n.LEN + newpar.LEN
+	n.Par = newpar.Par
+	newpar.Par.RemoveChild(newpar)
+	n.Len = n.Len + newpar.Len
 }
 
 //GraftTip is the inverse of above
 func GraftTip(newpar *Node, n *Node) {
-	n.PAR.AddChild(newpar)
-	n.PAR.RemoveChild(n)
+	n.Par.AddChild(newpar)
+	n.Par.RemoveChild(n)
 	newpar.AddChild(n)
-	newpar.LEN = n.LEN / 2.
-	n.LEN = newpar.LEN
+	newpar.Len = n.Len / 2.
+	n.Len = newpar.Len
 }

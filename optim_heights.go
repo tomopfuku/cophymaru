@@ -66,7 +66,7 @@ func OptimizeMorphStratHeights(tree *Node, lam float64) (float64, float64, []flo
 	preNodes := tree.PreorderArray()
 	for _, n := range preNodes {
 		if n.ISTIP == false { // && n.ANC == false {
-			p0 = append(p0, n.HEIGHT)
+			p0 = append(p0, n.Height)
 		}
 	}
 	meth := &optimize.NelderMead{}
@@ -116,7 +116,7 @@ func OptimizeLamMorphStratHeights(tree *Node) (float64, float64, []float64) {
 	preNodes := tree.PreorderArray()
 	for _, n := range preNodes {
 		if n.ISTIP == false { // && n.ANC == false {
-			p0 = append(p0, n.HEIGHT)
+			p0 = append(p0, n.Height)
 		}
 	}
 	meth := &optimize.NelderMead{}
@@ -167,8 +167,8 @@ func OptimizeGlobalRateHeights(tree *Node, lam float64) (float64, []float64) {
 	p0 = append(p0, 0.5)
 	preNodes := tree.PreorderArray()
 	for _, n := range preNodes {
-		if len(n.CHLD) > 0 { //&& n.ANC == false {
-			p0 = append(p0, n.HEIGHT)
+		if len(n.Chs) > 0 { //&& n.ANC == false {
+			p0 = append(p0, n.Height)
 		}
 	}
 	meth := &optimize.NelderMead{}
@@ -227,7 +227,7 @@ func OptimizeBranchRates(tree *Node) (float64, float64, []float64) {
 
 func OptimizeLocalRatesAD(anc *Node) (float64, float64, []float64) {
 	sib := anc.GetSib()
-	par := anc.PAR
+	par := anc.Par
 	fcn := func(rates []float64) float64 {
 		large := 100000000000.0
 		for _, i := range rates {
@@ -237,7 +237,7 @@ func OptimizeLocalRatesAD(anc *Node) (float64, float64, []float64) {
 		}
 		par.RATE = rates[0]
 		anc.RATE = rates[1]
-		morphLL := RootedLogLikeParallel(par.PAR, true, 4)
+		morphLL := RootedLogLikeParallel(par.Par, true, 4)
 		//stratLL := PoissonTreeLoglike(preNodes)
 		lnl := morphLL //+ stratLL
 		return -lnl

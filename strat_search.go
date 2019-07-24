@@ -66,8 +66,8 @@ func checkAllADAIC(tree *Node) (bestLL float64) {
 		//rellike = math.Exp(curLL) / (math.Exp(curLL) + math.Exp(bifLL))
 		rellike = math.Exp(curLL - (curLL + math.Log1p(math.Exp(bifLL-curLL))))
 		morphrellike := math.Exp(morphlnl - (morphlnl + math.Log1p(math.Exp(bifMorphLL-morphlnl))))
-		ancsupport[n.NAME] = rellike
-		fmt.Println(n.NAME, curLL, bifLL, AIC(morphlnl, morphK), bifMorphAIC, morphrellike)
+		ancsupport[n.Nam] = rellike
+		fmt.Println(n.Nam, curLL, bifLL, AIC(morphlnl, morphK), bifMorphAIC, morphrellike)
 		if curLL < bestLL {
 			bestLL = curLL
 			//UnmakeAncestor(n)
@@ -124,8 +124,8 @@ func checkAllADLL(tree *Node) (bestLL float64) {
 		//rellike = math.Exp(curLL) / (math.Exp(curLL) + math.Exp(bifLL))
 		rellike = math.Exp(curLL - (curLL + math.Log1p(math.Exp(bifLL-curLL))))
 		morphrellike := math.Exp(morphlnl - (morphlnl + math.Log1p(math.Exp(bifMorphLL-morphlnl))))
-		ancsupport[n.NAME] = rellike
-		fmt.Println(n.NAME, lnl, bifLL, morphlnl, bifMorphLL, AIC(curLL, morphK+stratK), AIC(bifLL, bifMorphK+stratK), morphrellike)
+		ancsupport[n.Nam] = rellike
+		fmt.Println(n.Nam, lnl, bifLL, morphlnl, bifMorphLL, AIC(curLL, morphK+stratK), AIC(bifLL, bifMorphK+stratK), morphrellike)
 		if curLL > bestLL {
 			bestLL = curLL
 			//UnmakeAncestor(n)
@@ -146,8 +146,8 @@ func candidateAncestors(tips []*Node) (anc []*Node) {
 	for _, n := range tips {
 		sib := n.GetSib()
 		oldest := sib.OldestDescendantAge()
-		fmt.Println(n.NAME, n.FAD, oldest)
-		if n.FAD > oldest && n.PAR.NAME != "root" {
+		fmt.Println(n.Nam, n.FAD, oldest)
+		if n.FAD > oldest && n.Par.Nam != "root" {
 			anc = append(anc, n)
 		}
 	}

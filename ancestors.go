@@ -4,40 +4,41 @@ package cophymaru
 func Make2BudAncestor(node *Node) {
 	youngest := 100000000000000.0
 	var moveChld *Node
-	for _, c := range node.CHLD {
+	for _, c := range node.Chs {
 		if c.FAD < youngest {
 			moveChld = c
 			youngest = c.FAD
 		}
 	}
 	oldest := moveChld.GetSib()
-	oldest.LEN += node.LEN
+	oldest.Len += node.Len
 	oldest.ANC = false
 	node.ANC = false
 	node.RemoveChild(oldest)
 	moveTo := node.GetSib()
-	node.PAR.RemoveChild(moveTo)
-	node.PAR.AddChild(oldest)
+	node.Par.RemoveChild(moveTo)
+	node.Par.AddChild(oldest)
 	node.AddChild(moveTo)
-	moveTo.LEN -= node.HEIGHT - moveTo.HEIGHT
-	node.NAME = moveTo.NAME + "_ancestor1"
+	moveTo.Len -= node.Height - moveTo.Height
+	node.Nam = moveTo.Nam + "_ancestor1"
 	node.ISTIP = true
 	node.ANC = true
 }
 
+/*
 func Make2BudTrees(ancestor, newdesc *Node) (bool, *Node) {
-	par := ancestor.PAR
+	par := ancestor.Par
 	if par.ANC == false {
 		return true, nil
 	}
 	newanc := ancestor.DeepCopySingleNode()
 	//dummy_anc := newanc.DeepCopySingleNode()
-	newanc.NAME += "_ancestral"
+	newanc.Nam += "_ancestral"
 	newanc.ISTIP = false
-	newdesc.PAR.RemoveChild(newdesc)
+	newdesc.Par.RemoveChild(newdesc)
 	return false, nil
 }
-
+*/
 func MakeAncestor(node *Node) bool {
 	if node.ANC == true || node.ISTIP == false {
 		return true
@@ -47,8 +48,8 @@ func MakeAncestor(node *Node) bool {
 		return true
 	}
 	sib.DIRDESC = true
-	node.PAR.NAME = node.NAME + "_ancestral"
-	node.PAR.MIS = node.MIS
+	node.Par.Nam = node.Nam + "_ancestral"
+	node.Par.MIS = node.MIS
 	var newheight float64
 	if node.FAD-node.LAD != 0.0 {
 		//newheight := node.FAD - 0.05
@@ -56,18 +57,18 @@ func MakeAncestor(node *Node) bool {
 	} else {
 		newheight = node.FAD
 	}
-	adjust := node.PAR.HEIGHT - newheight
-	node.PAR.LEN += adjust
-	node.LEN -= adjust
-	sib.LEN -= adjust
-	node.PAR.HEIGHT = newheight
-	node.PAR.FAD = node.FAD
+	adjust := node.Par.Height - newheight
+	node.Par.Len += adjust
+	node.Len -= adjust
+	sib.Len -= adjust
+	node.Par.Height = newheight
+	node.Par.FAD = node.FAD
 	node.RATE = 0.0
-	if node.LEN < 0.0 {
-		node.LEN = 0.0
+	if node.Len < 0.0 {
+		node.Len = 0.0
 	}
 	node.ANC = true
-	node.PAR.ANC = true
+	node.Par.ANC = true
 	return false
 }
 
@@ -81,28 +82,28 @@ func MakeAncestor(node *Node) bool {
 	if node.FAD < sib.FAD && sib.ISTIP == true {
 		return true
 	}
-	adj := node.PAR.HEIGHT - sib.FAD       //constr
-	node.PAR.LEN += adj                    //sib.FAD //sib.LEN
-	sib.LEN -= adj                         //node.PAR.HEIGHT - sib.FAD
-	if sib.LEN < 0.0 && sib.LEN > -0.001 { //correct for any rounding errors
-		sib.LEN = 0.0
+	adj := node.Par.Height - sib.FAD       //constr
+	node.Par.Len += adj                    //sib.FAD //sib.Len
+	sib.Len -= adj                         //node.Par.Height - sib.FAD
+	if sib.Len < 0.0 && sib.Len > -0.001 { //correct for any rounding errors
+		sib.Len = 0.0
 	}
-	node.PAR.HEIGHT = node.PAR.PAR.HEIGHT - node.PAR.LEN
-	sib.HEIGHT = node.PAR.HEIGHT - sib.LEN
+	node.Par.Height = node.Par.Par.Height - node.Par.Len
+	sib.Height = node.Par.Height - sib.Len
 	if sib.ISTIP == false && sib.ANC == false {
-		sib.FAD = sib.HEIGHT
+		sib.FAD = sib.Height
 	}
 	node.RATE = 0.0
-	node.PAR.FAD = node.FAD
-	node.LEN -= adj
-	node.HEIGHT = node.PAR.HEIGHT - node.LEN
-	if node.LEN < 0.0 {
-		node.LEN = 0.0
+	node.Par.FAD = node.FAD
+	node.Len -= adj
+	node.Height = node.Par.Height - node.Len
+	if node.Len < 0.0 {
+		node.Len = 0.0
 	}
 	node.ANC = true
-	node.PAR.ANC = true
-	node.PAR.NAME = node.NAME + "_ancestral"
-	fmt.Println(node.PAR.NAME, node.PAR.HEIGHT)
+	node.Par.ANC = true
+	node.Par.Nam = node.Nam + "_ancestral"
+	fmt.Println(node.Par.Nam, node.Par.Height)
 
 	return false
 }
@@ -123,20 +124,20 @@ func UnmakeAncestor(node *Node) bool {
 		return true
 	}
 	sib := node.GetSib()
-	sublen := (node.PAR.FAD - node.PAR.HEIGHT) //+ 0.01
-	node.PAR.LEN -= sublen                     //node.PAR.PAR.HEIGHT - node.PAR.HEIGHT
-	node.PAR.HEIGHT = node.PAR.FAD             // + 0.01
-	node.PAR.FAD = node.PAR.HEIGHT
-	sib.LEN += sublen //node.PAR.HEIGHT - sib.FAD
-	//sib.HEIGHT = node.PAR.HEIGHT - sib.LEN
+	sublen := (node.Par.FAD - node.Par.Height) //+ 0.01
+	node.Par.Len -= sublen                     //node.Par.Par.Height - node.Par.Height
+	node.Par.Height = node.Par.FAD             // + 0.01
+	node.Par.FAD = node.Par.Height
+	sib.Len += sublen //node.Par.Height - sib.FAD
+	//sib.Height = node.Par.Height - sib.Len
 	//if sib.ISTIP == false && sib.ANC == false {
-	//	sib.FAD = sib.HEIGHT
+	//	sib.FAD = sib.Height
 	//}
-	node.RATE = node.PAR.RATE
-	node.LEN += sublen //+ 0.000001
+	node.RATE = node.Par.RATE
+	node.Len += sublen //+ 0.000001
 	node.ANC = false
-	node.PAR.ANC = false
+	node.Par.ANC = false
 	sib.DIRDESC = false
-	node.PAR.NAME = ""
+	node.Par.Nam = ""
 	return false
 }

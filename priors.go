@@ -50,7 +50,7 @@ func InitializePrior(priorType string, nodes []*Node) *BranchLengthPrior {
 		pr.BETA = T
 		ntips := 0
 		for _, n := range nodes {
-			if len(n.CHLD) == 0 {
+			if len(n.Chs) == 0 {
 				ntips++
 			}
 		}
@@ -129,7 +129,7 @@ func exponentialPDF(p float64, beta float64) float64 {
 func ExponentialBranchLengthLogPrior(nodels []*Node, beta float64) (prob float64) {
 	var tempp float64
 	for _, n := range nodels {
-		tempp = exponentialPDF(n.LEN, beta)
+		tempp = exponentialPDF(n.Len, beta)
 		prob += math.Log(tempp)
 	}
 	return
@@ -139,7 +139,7 @@ func ExponentialBranchLengthLogPrior(nodels []*Node, beta float64) (prob float64
 func EBExponentialBranchLengthLogPrior(nodels []*Node, means []float64) (prob float64) {
 	var tempp float64
 	for i, n := range nodels {
-		tempp = exponentialPDF(n.LEN, means[i])
+		tempp = exponentialPDF(n.Len, means[i])
 		prob += math.Log(tempp)
 	}
 	return
@@ -149,7 +149,7 @@ func EBExponentialBranchLengthLogPrior(nodels []*Node, means []float64) (prob fl
 func EBNormalBranchLengthLogPrior(nodels []*Node, means []float64) (prob float64) {
 	var tempp float64
 	for i, n := range nodels {
-		tempp = normalPDF(n.LEN, means[i], 0.05)
+		tempp = normalPDF(n.Len, means[i], 0.05)
 		prob += math.Log(tempp)
 	}
 	return

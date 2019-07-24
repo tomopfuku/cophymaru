@@ -41,25 +41,25 @@ func RandomUnrootedTree(tree *Node) (root *Node) {
 	nodes := tree.PreorderArray()
 	var labels []string
 	for _, n := range nodes { //make slice containing all of the tip labels
-		if len(n.CHLD) == 0 {
-			labels = append(labels, n.NAME)
+		if len(n.Chs) == 0 {
+			labels = append(labels, n.Nam)
 		}
 	}
 	var randNodes []*Node
 	for _, name := range labels {
 		newtip := new(Node)
-		newtip.NAME = name
-		newtip.LEN = rand.Float64()
+		newtip.Nam = name
+		newtip.Len = rand.Float64()
 		for _, n := range nodes {
-			if n.NAME == "" {
+			if n.Nam == "" {
 				continue
-			} else if n.NAME == name {
+			} else if n.Nam == name {
 				newtip.CONTRT = n.CONTRT
 			}
 		}
 		MakeMissingDataSlice(newtip)
 		newpar := new(Node)
-		newpar.LEN = 0.1
+		newpar.Len = 0.1
 		newpar.AddChild(newtip)
 		for range newtip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
@@ -78,15 +78,15 @@ func RandomUnrootedTree(tree *Node) (root *Node) {
 	for i := 0; i < 3; i++ {
 		rsub := RandomNode(randNodes)
 		randNodes = popSampled(rsub, randNodes)
-		tip := rsub.CHLD[0]
+		tip := rsub.Chs[0]
 		rsub.RemoveChild(tip)
-		tip.LEN = rand.Float64() * 2.
+		tip.Len = rand.Float64() * 2.
 		root.AddChild(tip)
 	}
 	rootArray := root.PreorderArray()
 	for _, node := range randNodes {
 		reattach := RandomNode(rootArray[1:])
-		node.LEN = rand.Float64()
+		node.Len = rand.Float64()
 		GraftFossilTip(node, reattach)
 		rootArray = root.PreorderArray()
 	}

@@ -13,11 +13,11 @@ func PoissonTreeLoglike(nodels []*Node) float64 {
 	c := 1.0
 	treelik := 0.0
 	for _, node := range nodels {
-		if node.NAME == "root" {
+		if node.Nam == "root" {
 			continue
 		}
-		tf := node.PAR.HEIGHT * c
-		tl := node.HEIGHT * c
+		tf := node.Par.Height * c
+		tl := node.Height * c
 		brlik := 0.0
 		if node.FINDS > 1 {
 			f := node.FAD * c
@@ -41,18 +41,18 @@ func ADPoissonTreeLoglike(nodels []*Node, lam float64) float64 {
 	c := 1.0
 	treelik := 0.0
 	for _, node := range nodels {
-		if node.NAME == "root" {
+		if node.Nam == "root" {
 			continue
 		} else if node.ANC == true && node.ISTIP == false { // will calc likelihood of ancestors on the corresponding tip
 			continue
 		}
 		var tf float64
 		if node.ANC == false {
-			tf = node.PAR.HEIGHT * c
+			tf = node.Par.Height * c
 		} else if node.ANC == true && node.ISTIP == true {
-			tf = node.PAR.PAR.HEIGHT * c
+			tf = node.Par.Par.Height * c
 		}
-		tl := node.HEIGHT * c
+		tl := node.Height * c
 		brlik := 0.0
 		if node.FINDS > 1 {
 			f := node.FAD * c
@@ -113,7 +113,7 @@ func ReadStrat(stratfl string, nodels []*Node) {
 		}
 		linecount++
 		for _, node := range nodels {
-			if node.NAME == curtax {
+			if node.Nam == curtax {
 				if _, ok := matched[curtax]; !ok {
 					node.FAD = fad
 					node.LAD = lad
@@ -130,11 +130,11 @@ func ReadStrat(stratfl string, nodels []*Node) {
 	if matchcount != linecount {
 		fmt.Println("WARNING: the range file did not contain a range for all of the taxa in the tree")
 		for _, node := range nodels {
-			if node.NAME == "" {
+			if node.Nam == "" {
 				continue
 			}
-			if _, ok := matched[node.NAME]; !ok {
-				fmt.Println(node.NAME)
+			if _, ok := matched[node.Nam]; !ok {
+				fmt.Println(node.Nam)
 			}
 		}
 		fmt.Println("is/are not in the provided range file")
@@ -142,19 +142,19 @@ func ReadStrat(stratfl string, nodels []*Node) {
 }
 
 func assignHeights(node *Node) {
-	for _, chld := range node.CHLD {
+	for _, chld := range node.Chs {
 		assignHeights(chld)
 	}
 	if node.ISTIP {
 		if node.LAD == 0.0 {
-			node.HEIGHT = node.LAD
+			node.Height = node.LAD
 		} else {
-			node.HEIGHT = node.LAD - 0.000001
+			node.Height = node.LAD - 0.000001
 		}
 	} else {
 		oldestChildHeight := OldestChildAge(node)
-		node.HEIGHT = oldestChildHeight + 0.001
-		node.FAD = node.HEIGHT
+		node.Height = oldestChildHeight + 0.001
+		node.FAD = node.Height
 	}
 
 }
@@ -163,18 +163,18 @@ func MakeStratHeights(tree *Node) {
 	assignHeights(tree)
 	postTree := tree.PostorderArray()
 	for _, node := range postTree {
-		if node.NAME == "root" {
+		if node.Nam == "root" {
 			continue
 		} else {
-			node.LEN = node.PAR.HEIGHT - node.HEIGHT
+			node.Len = node.Par.Height - node.Height
 		}
 	}
 }
 
 func OldestChildAge(node *Node) float64 {
 	oldestChildHeight := 0.0
-	for _, c := range node.CHLD {
-		if c.FAD > oldestChildHeight && c.NAME+"_ancestral" != node.NAME {
+	for _, c := range node.Chs {
+		if c.FAD > oldestChildHeight && c.Nam+"_ancestral" != node.Nam {
 			oldestChildHeight = c.FAD
 		}
 	}

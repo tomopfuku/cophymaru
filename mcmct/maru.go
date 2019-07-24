@@ -13,10 +13,10 @@ import (
 )
 
 func postorder(curnode *cophymaru.Node) {
-	for _, chld := range curnode.CHLD {
+	for _, chld := range curnode.Chs {
 		postorder(chld)
 	}
-	fmt.Println(curnode.NAME, curnode.CONTRT, curnode.LEN)
+	fmt.Println(curnode.Nam, curnode.CONTRT, curnode.Len)
 }
 
 func main() {
@@ -67,7 +67,7 @@ func main() {
 		var missing []string
 		for _, n := range nz {
 			if len(n.CONTRT) == 0 {
-				missing = append(missing, n.NAME)
+				missing = append(missing, n.Nam)
 			}
 		}
 		if len(missing) != 0 {
@@ -101,7 +101,7 @@ func main() {
 		}
 		//l1 := cophymaru.CalcUnrootedLogLike(tree, true)
 		//l2 := cophymaru.WeightedUnrootedLogLike(tree, true, weights)
-		//fmt.Println("START COMPARISON:", l1, l2)
+		//fmt.Println("START COMParISON:", l1, l2)
 		//TODO: need to init new MCMC class to make this work again.
 		treeOutFile := *runNameArg
 		treeOutFile += ".t"

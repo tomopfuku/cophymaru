@@ -7,12 +7,12 @@ func RandomStartingTree(traits map[string][]float64) (root *Node) {
 	var randNodes []*Node
 	for name, tr := range traits {
 		newtip := new(Node)
-		newtip.NAME = name
-		newtip.LEN = rand.Float64()
+		newtip.Nam = name
+		newtip.Len = rand.Float64()
 		newtip.CONTRT = tr
 		MakeMissingDataSlice(newtip)
 		newpar := new(Node)
-		newpar.LEN = 0.1
+		newpar.Len = 0.1
 		newpar.AddChild(newtip)
 		for range newtip.CONTRT {
 			newpar.CONTRT = append(newpar.CONTRT, float64(0.0))
@@ -31,15 +31,15 @@ func RandomStartingTree(traits map[string][]float64) (root *Node) {
 	for i := 0; i < 3; i++ {
 		rsub := RandomNode(randNodes)
 		randNodes = popSampled(rsub, randNodes)
-		tip := rsub.CHLD[0]
+		tip := rsub.Chs[0]
 		rsub.RemoveChild(tip)
-		tip.LEN = rand.Float64() * 2.
+		tip.Len = rand.Float64() * 2.
 		root.AddChild(tip)
 	}
 	rootArray := root.PreorderArray()
 	for _, node := range randNodes {
 		reattach := RandomNode(rootArray[1:])
-		node.LEN = rand.Float64()
+		node.Len = rand.Float64()
 		GraftFossilTip(node, reattach)
 		rootArray = root.PreorderArray()
 	}

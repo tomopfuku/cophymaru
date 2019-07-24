@@ -12,17 +12,17 @@ import (
 //InternalNodeSlice will return a slice containing only internal nodes
 func InternalNodeSlice(nodes []*Node) (inNodes []*Node) {
 	for _, n := range nodes {
-		if len(n.CHLD) == 2 {
+		if len(n.Chs) == 2 {
 			inNodes = append(inNodes, n)
 		}
 	}
 	return
 }
 
-//InitParallelPRNLEN will set up empty slices for the prnlens
-func InitParallelPRNLEN(nodes []*Node) {
+//InitParallelPRNLen will set up empty slices for the prnlens
+func InitParallelPRNLen(nodes []*Node) {
 	for _, n := range nodes {
-		n.CONPRNLEN = make([]float64, len(nodes[0].CONTRT))
+		n.CONPRNLen = make([]float64, len(nodes[0].CONTRT))
 	}
 }
 
@@ -30,7 +30,7 @@ func InitParallelPRNLEN(nodes []*Node) {
 func TreeLength(nodes []*Node) float64 {
 	len := 0.
 	for _, n := range nodes[1:] {
-		len += n.LEN
+		len += n.Len
 	}
 	return len
 }
@@ -42,7 +42,7 @@ func MakeRandomStartingBranchLengths(tree *Node) {
 		s1 := rand.NewSource(time.Now().UnixNano())
 		r1 := rand.New(s1)
 		u := r1.Float64()
-		n.LEN = u
+		n.Len = u
 	}
 }
 
@@ -71,7 +71,7 @@ func ReadFossils(path string) (fos []string) {
 
 func maxChildFAD(node *Node) float64 {
 	highest := 0.0
-	for _, c := range node.CHLD {
+	for _, c := range node.Chs {
 		if c.FAD > highest {
 			highest = c.FAD
 		}
@@ -88,7 +88,7 @@ func AssignBranchRates(preTree []*Node, rates []float64) bool {
 	*/
 	i := 0
 	for _, node := range preTree[1:] {
-		if node.NAME == "root" {
+		if node.Nam == "root" {
 			continue
 		} else if node.ISTIP == true && node.ANC == true {
 			continue
@@ -128,7 +128,7 @@ func AssignInternalNodeHeights(preTree []*Node, heights []float64) bool {
 				constr2 = constr1
 			} else {
 				//if newheight > node.FAD {
-				//	fmt.Println(node.NAME, node.FAD, newheight)
+				//	fmt.Println(node.Nam, node.FAD, newheight)
 
 				//return true
 				//}
@@ -136,28 +136,28 @@ func AssignInternalNodeHeights(preTree []*Node, heights []float64) bool {
 				constr2 = cont.LAD
 			}
 			if newheight < constr1 || newheight < constr2 {
-				//fmt.Println(node.NAME, node.HEIGHT, newheight, node.FAD, constr1, constr2)
+				//fmt.Println(node.Nam, node.Height, newheight, node.FAD, constr1, constr2)
 				return true
 			}
-			if node.NAME != "root" {
-				if newheight > node.PAR.FAD {
-					//fmt.Println(node.NAME)
+			if node.Nam != "root" {
+				if newheight > node.Par.FAD {
+					//fmt.Println(node.Nam)
 					return true
 				}
 			}
-			node.HEIGHT = newheight
+			node.Height = newheight
 			if node.ANC == false {
-				node.FAD = node.HEIGHT
+				node.FAD = node.Height
 			}
 			count++
 		}
-		if node.NAME != "root" {
-			newlen := node.PAR.HEIGHT - node.HEIGHT
+		if node.Nam != "root" {
+			newlen := node.Par.Height - node.Height
 			if newlen < 0.0 {
 				return true
 			}
-			node.LEN = newlen
-			if node.HEIGHT > node.PAR.HEIGHT {
+			node.Len = newlen
+			if node.Height > node.Par.Height {
 				return true
 			}
 		}
@@ -167,7 +167,7 @@ func AssignInternalNodeHeights(preTree []*Node, heights []float64) bool {
 
 func NodeFromLabel(label string, nodes []*Node) *Node {
 	for _, node := range nodes {
-		if node.NAME == label {
+		if node.Nam == label {
 			return node
 		}
 	}

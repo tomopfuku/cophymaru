@@ -9,29 +9,30 @@ import (
 
 //Node is a node struct to represent rooted and unrooted phylogenetic trees
 type Node struct {
-	PAR    *Node
-	CHLD   []*Node
-	NAME   string
-	LEN    float64
-	PRNLEN float64
+	Par    *Node
+	Chs    []*Node
+	Nam    string
+	Len    float64
+	PRNLen float64
 	CONTRT []float64
 	//VISITED bool
-	MRK       bool
+	Marked    bool
 	MIS       []bool //this is a slice of bools that indicates whether the index is missing from CONTRT
 	LL        []float64
-	CONPRNLEN []float64
+	CONPRNLen []float64
 	FAD       float64
 	LAD       float64
-	HEIGHT    float64
+	Height    float64
 	FINDS     float64
 	RATE      float64
 	ISTIP     bool
 	ANC       bool
-	LSLEN     float64
-	LSPRNLEN  float64
+	LSLen     float64
+	LSPRNLen  float64
 	OUTGRP    bool
 	DIRDESC   bool
 	DISCTRT   map[int]map[string]float64
+	Num       int
 }
 
 func (n *Node) OldestDescendantAge() float64 {
@@ -48,14 +49,14 @@ func (n *Node) OldestDescendantAge() float64 {
 }
 
 func (n *Node) GetSib() *Node {
-	if n.NAME == "root" {
+	if n.Nam == "root" {
 		fmt.Println("Root node has no sibling")
 		os.Exit(0)
 	}
-	par := n.PAR
+	par := n.Par
 	var sib *Node
-	if len(par.CHLD) != 2 {
-		if len(par.CHLD) == 1 {
+	if len(par.Chs) != 2 {
+		if len(par.Chs) == 1 {
 			fmt.Println("Singleton encountered in tree")
 			os.Exit(0)
 		} else {
@@ -63,7 +64,7 @@ func (n *Node) GetSib() *Node {
 			os.Exit(0)
 		}
 	}
-	for _, c := range par.CHLD {
+	for _, c := range par.Chs {
 		if c != n {
 			sib = c
 		}
@@ -80,8 +81,8 @@ func (n *Node) GetContDesc() (cont *Node) {
 	if n.ANC == false {
 		fmt.Println("can't get the continuation of a hypothetical ancestor")
 	}
-	for _, nn := range n.CHLD {
-		if nn.ANC == true && nn.NAME+"_ancestral" == n.NAME {
+	for _, nn := range n.Chs {
+		if nn.ANC == true && nn.Nam+"_ancestral" == n.Nam {
 			cont = nn
 		}
 	}
@@ -90,20 +91,20 @@ func (n *Node) GetContDesc() (cont *Node) {
 
 //Root will root an unrooted tritomy tree in place
 func (n *Node) Root(rootsublen float64) {
-	if len(n.CHLD) == 2 {
+	if len(n.Chs) == 2 {
 		fmt.Println("cannot root already rooted tree")
 	}
-	nn := &Node{n, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, 0.0, 0.0, false, false, nil}
-	nn.CONPRNLEN = make([]float64, len(n.CONTRT))
+	nn := &Node{n, nil, "", 0., 0.0, nil, false, nil, nil, nil, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, 0.0, 0.0, false, false, nil, 0}
+	nn.CONPRNLen = make([]float64, len(n.CONTRT))
 	nn.CONTRT = make([]float64, len(n.CONTRT))
 	nn.LL = make([]float64, len(n.CONTRT))
 	for range nn.LL {
 		nn.MIS = append(nn.MIS, false)
 	}
 	var ignodes, ognodes []*Node
-	for _, c := range n.CHLD {
+	for _, c := range n.Chs {
 		if c.ANC == true {
-			nn.NAME = c.NAME + "_ancestral"
+			nn.Nam = c.Nam + "_ancestral"
 			nn.ANC = true
 			nn.FAD = c.FAD
 		}
@@ -119,27 +120,27 @@ func (n *Node) Root(rootsublen float64) {
 		n.RemoveChild(ignodes[1])
 		nn.AddChild(ignodes[0])
 		nn.AddChild(ignodes[1])
-		//nn.LEN = ognodes[0].LEN / 2.0
-		nn.LEN = rootsublen
-		ognodes[0].LEN = ognodes[0].LEN - rootsublen //nn.LEN
-		nn.LSLEN = ognodes[0].LSLEN / 2.0
-		ognodes[0].LSLEN = nn.LSLEN
+		//nn.Len = ognodes[0].Len / 2.0
+		nn.Len = rootsublen
+		ognodes[0].Len = ognodes[0].Len - rootsublen //nn.Len
+		nn.LSLen = ognodes[0].LSLen / 2.0
+		ognodes[0].LSLen = nn.LSLen
 	} else if len(ognodes) == 2 {
 		n.AddChild(nn)
 		n.RemoveChild(ognodes[0])
 		n.RemoveChild(ognodes[1])
 		nn.AddChild(ognodes[0])
 		nn.AddChild(ognodes[1])
-		nn.LEN = rootsublen
-		ignodes[0].LEN = ignodes[0].LEN - rootsublen //nn.LEN
-		nn.LSLEN = ignodes[0].LSLEN / 2.0
-		ignodes[0].LSLEN = nn.LSLEN
+		nn.Len = rootsublen
+		ignodes[0].Len = ignodes[0].Len - rootsublen //nn.Len
+		nn.LSLen = ignodes[0].LSLen / 2.0
+		ignodes[0].LSLen = nn.LSLen
 
 	} else {
 		fmt.Println("there was a problem rooting the tree")
 		os.Exit(0)
 	}
-	nn.HEIGHT = n.HEIGHT - nn.LEN
+	nn.Height = n.Height - nn.Len
 
 	if n.DISCTRT != nil {
 		nn.LL = make([]float64, len(n.DISCTRT))
@@ -154,32 +155,32 @@ func (n *Node) Root(rootsublen float64) {
 }
 
 func (n *Node) Unroot() (rootlen float64) {
-	if len(n.CHLD) != 2 {
+	if len(n.Chs) != 2 {
 		fmt.Println("cannot unroot already unrooted tree")
 		os.Exit(0)
 	}
 	var igPar, ogPar *Node
-	for _, c := range n.CHLD {
+	for _, c := range n.Chs {
 		if c.OUTGRP == true {
 			ogPar = c
 		} else {
 			igPar = c
 		}
 	}
-	if len(ogPar.CHLD) > 0 {
-		rootlen = ogPar.LEN
-		igPar.LEN += ogPar.LEN
-		igPar.LSLEN += ogPar.LSLEN
-		for _, cc := range ogPar.CHLD {
+	if len(ogPar.Chs) > 0 {
+		rootlen = ogPar.Len
+		igPar.Len += ogPar.Len
+		igPar.LSLen += ogPar.LSLen
+		for _, cc := range ogPar.Chs {
 			ogPar.RemoveChild(cc)
 			n.AddChild(cc)
 			n.RemoveChild(ogPar)
 		}
 	} else {
-		rootlen = igPar.LEN
-		ogPar.LEN += igPar.LEN
-		ogPar.LSLEN += igPar.LSLEN
-		for _, cc := range igPar.CHLD {
+		rootlen = igPar.Len
+		ogPar.Len += igPar.Len
+		ogPar.LSLen += igPar.LSLen
+		for _, cc := range igPar.Chs {
 			igPar.RemoveChild(cc)
 			n.AddChild(cc)
 			n.RemoveChild(igPar)
@@ -189,25 +190,27 @@ func (n *Node) Unroot() (rootlen float64) {
 }
 
 func (n *Node) SetOutgroup(outgroup []string) {
-	if n.PAR != nil {
+	if n.Par != nil {
 		fmt.Println("can't set outgroup from node that isn't the root")
 	}
 	tipdic := make(map[string]bool)
 	for _, n := range n.PreorderTips() {
-		tipdic[n.NAME] = true
+		tipdic[n.Nam] = true
 	}
 	outdic := make(map[string]bool)
 	for _, tax := range outgroup {
 		outdic[tax] = true
 		if _, ok := tipdic[tax]; !ok {
+			fmt.Println(tax)
+			fmt.Println(tipdic)
 			fmt.Println("one of the taxa named in the outgroup is not in the tree. please fix.")
 			os.Exit(0)
 		}
 	}
 	var ogPars []*Node
-	for _, c := range n.CHLD {
+	for _, c := range n.Chs {
 		for _, cc := range c.PreorderTips() {
-			if _, ok := outdic[cc.NAME]; ok {
+			if _, ok := outdic[cc.Nam]; ok {
 				ogPars = append(ogPars, c)
 			}
 		}
@@ -223,7 +226,7 @@ func (n *Node) SetOutgroup(outgroup []string) {
 //PostorderArray will return an array of all the nodes in the tree in Postorder
 func (n *Node) PostorderArray() (ret []*Node) {
 	var buffer []*Node
-	for _, cn := range n.CHLD {
+	for _, cn := range n.Chs {
 		for _, cret := range cn.PreorderArray() {
 			buffer = append(buffer, cret)
 		}
@@ -239,7 +242,7 @@ func (n *Node) PreorderTips() (ret []*Node) {
 	if n.ISTIP {
 		buffer = append(buffer, n)
 	}
-	for _, cn := range n.CHLD {
+	for _, cn := range n.Chs {
 		for _, cret := range cn.PreorderTips() {
 			if cret.ISTIP {
 				buffer = append(buffer, cret)
@@ -254,7 +257,7 @@ func (n *Node) PreorderTips() (ret []*Node) {
 func (n *Node) PreorderArray() (ret []*Node) {
 	var buffer []*Node
 	buffer = append(buffer, n)
-	for _, cn := range n.CHLD {
+	for _, cn := range n.Chs {
 		for _, cret := range cn.PreorderArray() {
 			buffer = append(buffer, cret)
 		}
@@ -266,23 +269,23 @@ func (n *Node) PreorderArray() (ret []*Node) {
 //Newick will return a newick string representation of the tree
 func (n Node) Newick(bl bool) (ret string) {
 	var buffer bytes.Buffer
-	for in, cn := range n.CHLD {
+	for in, cn := range n.Chs {
 		if in == 0 {
 			buffer.WriteString("(")
 		}
 		buffer.WriteString(cn.Newick(bl))
 		if bl == true {
-			s := strconv.FormatFloat(cn.LEN, 'f', -1, 64)
+			s := strconv.FormatFloat(cn.Len, 'f', -1, 64)
 			buffer.WriteString(":")
 			buffer.WriteString(s)
 		}
-		if in == len(n.CHLD)-1 {
+		if in == len(n.Chs)-1 {
 			buffer.WriteString(")")
 		} else {
 			buffer.WriteString(",")
 		}
 	}
-	buffer.WriteString(n.NAME)
+	buffer.WriteString(n.Nam)
 	ret = buffer.String()
 	return
 }
@@ -290,21 +293,21 @@ func (n Node) Newick(bl bool) (ret string) {
 //Phylogram will return a newick string representation of the tree with least squares estimates as the branch lengths
 func (n Node) Phylogram() (ret string) {
 	var buffer bytes.Buffer
-	for in, cn := range n.CHLD {
+	for in, cn := range n.Chs {
 		if in == 0 {
 			buffer.WriteString("(")
 		}
 		buffer.WriteString(cn.Phylogram())
-		s := strconv.FormatFloat(cn.LSLEN, 'f', -1, 64)
+		s := strconv.FormatFloat(cn.LSLen, 'f', -1, 64)
 		buffer.WriteString(":")
 		buffer.WriteString(s)
-		if in == len(n.CHLD)-1 {
+		if in == len(n.Chs)-1 {
 			buffer.WriteString(")")
 		} else {
 			buffer.WriteString(",")
 		}
 	}
-	buffer.WriteString(n.NAME)
+	buffer.WriteString(n.Nam)
 	ret = buffer.String()
 	return
 }
@@ -312,7 +315,7 @@ func (n Node) Phylogram() (ret string) {
 //Rateogram will return a newick string representation of the tree with rates as the branch lengths
 func (n Node) Rateogram() (ret string) {
 	var buffer bytes.Buffer
-	for in, cn := range n.CHLD {
+	for in, cn := range n.Chs {
 		if in == 0 {
 			buffer.WriteString("(")
 		}
@@ -320,13 +323,13 @@ func (n Node) Rateogram() (ret string) {
 		s := strconv.FormatFloat(cn.RATE, 'f', -1, 64)
 		buffer.WriteString(":")
 		buffer.WriteString(s)
-		if in == len(n.CHLD)-1 {
+		if in == len(n.Chs)-1 {
 			buffer.WriteString(")")
 		} else {
 			buffer.WriteString(",")
 		}
 	}
-	buffer.WriteString(n.NAME)
+	buffer.WriteString(n.Nam)
 	ret = buffer.String()
 	return
 }
@@ -337,46 +340,46 @@ func (n *Node) CalcBranchRates() {
 		if nn == n {
 			continue
 		}
-		if nn.LSLEN != 0.0 && nn.LEN != 0.0 {
-			nn.RATE = nn.LSLEN / nn.LEN
+		if nn.LSLen != 0.0 && nn.Len != 0.0 {
+			nn.RATE = nn.LSLen / nn.Len
 
-		} else if nn.LSLEN == 0.0 {
+		} else if nn.LSLen == 0.0 {
 			nn.RATE = 0.0
-		} else if nn.LEN == 0.0 {
-			nn.RATE = nn.LSLEN / 0.1
+		} else if nn.Len == 0.0 {
+			nn.RATE = nn.LSLen / 0.1
 		}
 	}
 }
 
 //AddChild will add a child to a node
 func (n *Node) AddChild(c *Node) error {
-	for _, ch := range n.CHLD {
+	for _, ch := range n.Chs {
 		if c == ch {
 			fmt.Println("You are trying to reroot on the current node!")
 		}
 	}
-	n.CHLD = append(n.CHLD, c)
-	c.PAR = n
+	n.Chs = append(n.Chs, c)
+	c.Par = n
 	return nil
 }
 
 //RemoveChild will remove a chidl from the slice of children associated with a node
 func (n *Node) RemoveChild(c *Node) {
-	var newCHLD []*Node
-	for _, ch := range n.CHLD {
+	var newChs []*Node
+	for _, ch := range n.Chs {
 		if ch != c {
-			newCHLD = append(newCHLD, ch)
+			newChs = append(newChs, ch)
 		}
-		n.CHLD = nil
-		n.CHLD = newCHLD
-		c.PAR = nil
+		n.Chs = nil
+		n.Chs = newChs
+		c.Par = nil
 	}
 }
 
 //NNodes is a helper method that will return the number of internal nodes descending from n (including n)
 func (n *Node) NNodes(count *int) {
 	*count++
-	for _, ch := range n.CHLD {
+	for _, ch := range n.Chs {
 		ch.NNodes(count)
 	}
 }
@@ -399,7 +402,7 @@ func (n *Node) RerootLS(oldroot *Node) *Node {
 			break
 		}
 		pathlen++
-		curnode = curnode.PAR
+		curnode = curnode.Par
 	}
 	var newpar *Node
 	for i := pathlen; i >= 1; i-- {
@@ -407,11 +410,11 @@ func (n *Node) RerootLS(oldroot *Node) *Node {
 		curnode = pathnodes[i]
 		curnode.RemoveChild(newpar)
 		newpar.AddChild(curnode)
-		curnode.LSLEN = newpar.LSLEN
+		curnode.LSLen = newpar.LSLen
 	}
 	//curnode = nil
 	//newpar = nil
-	n.LSLEN = 0.0
+	n.LSLen = 0.0
 	return n
 }
 
@@ -433,7 +436,7 @@ func (n *Node) Reroot(oldroot *Node) *Node {
 			break
 		}
 		pathlen++
-		curnode = curnode.PAR
+		curnode = curnode.Par
 	}
 	var newpar *Node
 	for i := pathlen; i >= 1; i-- {
@@ -441,11 +444,11 @@ func (n *Node) Reroot(oldroot *Node) *Node {
 		curnode = pathnodes[i]
 		curnode.RemoveChild(newpar)
 		newpar.AddChild(curnode)
-		curnode.LEN = newpar.LEN
+		curnode.Len = newpar.Len
 	}
 	//curnode = nil
 	//newpar = nil
-	n.LEN = 0.0
+	n.Len = 0.0
 	return n
 }
 
@@ -458,8 +461,8 @@ func (n *Node) UnmarkToRoot(oldroot *Node) {
 	pathlen := int(0)
 	for {
 		pathlen++
-		curnode = curnode.PAR
-		curnode.MRK = false
+		curnode = curnode.Par
+		curnode.Marked = false
 		if curnode == oldroot {
 			break
 		}
@@ -474,7 +477,7 @@ func (n *Node) UnmarkToRoot(oldroot *Node) {
 func (n *Node) UnmarkAll() {
 	nodes := n.PreorderArray()
 	for _, node := range nodes {
-		node.MRK = false
+		node.Marked = false
 	}
 }
 
@@ -482,6 +485,6 @@ func (n *Node) UnmarkAll() {
 func (n *Node) MarkAll() {
 	nodes := n.PreorderArray()
 	for _, node := range nodes {
-		node.MRK = true
+		node.Marked = true
 	}
 }

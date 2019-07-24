@@ -29,8 +29,8 @@ func main() {
 	tree := cophymaru.ReadTree(nwk)
 	tree.SetOutgroup(strings.Split(*outgrpArg, ","))
 	for _, n := range tree.PreorderArray() {
-		n.LEN = rand.Float64()
-		n.LSLEN = rand.Float64()
+		n.Len = rand.Float64()
+		n.LSLen = rand.Float64()
 	}
 	nodels := tree.PreorderArray()
 	traits, _, ntraits := cophymaru.ReadContinuous(*traitArg)
@@ -55,7 +55,7 @@ func main() {
 
 			tree.Root(sublen)
 			tree.CalcBranchRates()
-			//cophymaru.InitParallelPRNLEN(nodels)
+			//cophymaru.InitParallelPRNLen(nodels)
 			fmt.Println(tree.Phylogram())
 
 			_, _, _ = cophymaru.OptimizeMorphStratHeights(tree, 2.8)
@@ -93,5 +93,4 @@ func main() {
 		log.Fatal(err)
 	}
 	f.Close()
-
 }
