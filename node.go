@@ -103,7 +103,7 @@ func (n *Node) Root(rootsublen float64) {
 	}
 	var ignodes, ognodes []*Node
 	for _, c := range n.Chs {
-		if c.ANC == true {
+		if c.ANC == true && c.ISTIP == true {
 			nn.Nam = c.Nam + "_ancestral"
 			nn.ANC = true
 			nn.FAD = c.FAD

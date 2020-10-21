@@ -84,7 +84,8 @@ func rootedSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 
 func rootedMissingSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 	for _, chld := range n.Chs {
-		rootedDispSiteLL(chld, nlikes, startFresh, site)
+		rootedMissingSiteLL(chld, nlikes, startFresh, site)
+		//rootedDispSiteLL(chld, nlikes, startFresh, site)
 	}
 	nchld := len(n.Chs)
 	if n.Marked == true {
@@ -125,7 +126,12 @@ func rootedMissingSiteLL(n *Node, nlikes *float64, startFresh bool, site int) {
 				n.CONPRNLen[site] += c0.CONPRNLen[site]
 				n.CONTRT[site] = c0.CONTRT[site]
 				n.LL[site] = 0.0
+			} else if c1.MIS[site] == true && c0.MIS[site] == true {
+				n.MIS[site] = true
+				//tempBranchLength := n.CONPRNLen[site] + (((c0.CONPRNLen[site]) * (c1.CONPRNLen[site])) / ((c0.CONPRNLen[site]) + (c1.CONPRNLen[site]))) // need to calculate the prune length by adding the averaged lengths of the daughter nodes to the length
+				//n.CONPRNLen[site] = tempBranchLength                                                                                                    // need to calculate the "prune length" by adding the length to the uncertainty
 			}
+
 		}
 	}
 }
@@ -134,7 +140,8 @@ func rootedTreeLike(tree *Node, startFresh bool, jobs <-chan int, results chan<-
 	for site := range jobs {
 		tmpll := 0.
 		rootedMissingSiteLL(tree, &tmpll, startFresh, site)
-		tmpll = tree.LL[site]
+		//tmpll = tree.LL[site]
+		//fmt.Println(tmpll)
 		results <- tmpll
 	}
 }

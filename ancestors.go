@@ -40,11 +40,17 @@ func Make2BudTrees(ancestor, newdesc *Node) (bool, *Node) {
 }
 */
 func MakeAncestor(node *Node) bool {
-	if node.ANC == true || node.ISTIP == false {
+	if node.ANC == true {
+		return true
+	}
+	if node.ISTIP == false {
 		return true
 	}
 	sib := node.GetSib()
 	if node.FAD < sib.FAD {
+		return true
+	}
+	if len(node.Chs) != 0 {
 		return true
 	}
 	sib.DIRDESC = true

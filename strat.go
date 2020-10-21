@@ -149,7 +149,7 @@ func assignHeights(node *Node) {
 		if node.LAD == 0.0 {
 			node.Height = node.LAD
 		} else {
-			node.Height = node.LAD - 0.000001
+			node.Height = node.LAD - 0.001
 		}
 	} else {
 		oldestChildHeight := OldestChildAge(node)
