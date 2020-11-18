@@ -7,8 +7,8 @@ import (
 
 func ADStratTreeSearch(tree *Node) {
 	//curbest := checkAllADLL(tree)
-	curbest := checkAllMorphADAIC(tree)
-	//curbest := checkAllADAIC(tree)
+	//curbest := checkAllMorphADAIC(tree)
+	curbest := checkAllADAIC(tree)
 	//Make2BudAncestor(NodeFromLabel("H_erg", tree.PreorderArray()).GetSib())
 	fmt.Println(curbest, tree.Newick(true))
 
